@@ -71,6 +71,7 @@ namespace ContrastTests
             Test_NewtonX_SequentialColliderValidation_Suite();
             Test_CrossSystem_DeathY_Camera_NewtonX_Regression_Suite();
             Test_RC4_Animation_Checkpoint_And_ReversibleCamera_Suite();
+            Test_DemoLobbyMiniGame_FullLoop_Suite();
 
             Console.WriteLine("================================================================================");
             Console.WriteLine($"RESULTS: {passed} PASSED, {failed} FAILED");
@@ -1065,7 +1066,7 @@ namespace ContrastTests
             AssertApprox(1f, c0.r, 0.01f, "ColorVisual", "White color r is 1");
             AssertApprox(0.55f, c127.r, 0.01f, "ColorVisual", "Gray color r is 0.55");
             AssertApprox(0.12f, c212.r, 0.01f, "ColorVisual", "Black color r is 0.12");
-            AssertApprox(0.157f, c255.r, 0.01f, "ColorVisual", "Universal color r is 0.157 (Gray-Blue)");
+            AssertApprox(0.95f, c255.r, 0.01f, "ColorVisual", "Universal color r is 0.95 (Yellow)");
 
             // 3. LevelData platform size & color mutation roundtrip
             var level = new LevelData
@@ -1873,7 +1874,7 @@ namespace ContrastTests
             LevelData data = DeserializeLevelData(rawJson);
             Assert(data != null, "Test1_L02_JsonParse", "L02 parses into LevelData");
             Assert(data.levelId == "L02", "Test1_L02_LevelId", "LevelId is L02");
-            Assert(data.platforms != null && data.platforms.Length == 15, "Test1_L02_Platforms15", "L02 contains 15 terrain blocks");
+            Assert(data.platforms != null && data.platforms.Length == 16, "Test1_L02_Platforms16", "L02 contains 16 terrain blocks");
             Assert(data.newton != null, "Test1_L02_Newton_NotNull", "L02 has newton configuration");
             Assert(data.newton.cx == 5110f && data.newton.cy == 528f, "Test1_L02_Newton_Center", "L02 center is (5110, 528)");
             Assert(data.newton.i == 2 && data.newton.k == 4, "Test1_L02_Newton_Fringes", "L02 fringe orders are i=2, k=4");
@@ -2331,12 +2332,12 @@ namespace ContrastTests
                 Assert(maxBoundX >= newtonRightEdge, "Task4_CameraBoundary_IncludesNewton", $"Calculated camera boundary right edge ({maxBoundX:F2}) covers Newton chamber ({newtonRightEdge:F2})");
             }
 
-            // Task 5: Special Columns Gray-Blue (rawGrayscaleColor = 255 -> #28323b)
+            // Task 5: Special Columns Yellow (rawGrayscaleColor = 255 -> Yellow)
             UnityEngine.Color universalCol = ColorClassifier.GetPlatformVisualColor(255f);
-            AssertApprox(0.157f, universalCol.r, 0.01f, "Task5_SpecialColumns_GrayBlue_R", "Universal column R channel is 0.157 (#28)");
-            AssertApprox(0.196f, universalCol.g, 0.01f, "Task5_SpecialColumns_GrayBlue_G", "Universal column G channel is 0.196 (#32)");
-            AssertApprox(0.231f, universalCol.b, 0.01f, "Task5_SpecialColumns_GrayBlue_B", "Universal column B channel is 0.231 (#3b)");
-            Assert(universalCol.b > universalCol.r, "Task5_SpecialColumns_CoolTone", "Universal column has cool gray-blue tint (B > R), not gold/amber");
+            AssertApprox(0.95f, universalCol.r, 0.01f, "Task5_SpecialColumns_Yellow_R", "Universal column R channel is 0.95");
+            AssertApprox(0.78f, universalCol.g, 0.01f, "Task5_SpecialColumns_Yellow_G", "Universal column G channel is 0.78");
+            AssertApprox(0.18f, universalCol.b, 0.01f, "Task5_SpecialColumns_Yellow_B", "Universal column B channel is 0.18");
+            Assert(universalCol.r > universalCol.b && universalCol.g > universalCol.b, "Task5_SpecialColumns_WarmYellowTone", "Universal column has warm yellow tint (R > B and G > B)");
 
             // Task 6: Quang Diem Collectibles in Campaign JSONs (L01: 2, L02: 2, L03: 3)
             string levelsDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "Assets", "Resources", "Levels");
@@ -2895,7 +2896,7 @@ namespace ContrastTests
             Assert(l02.checkPoint != null && l02.checkPoint.Length == 5, "RC4_L02_CheckpointCount5", $"L02 has 5 checkpoints (actual: {l02.checkPoint?.Length})");
 
             var preNewtonCp = l02.checkPoint[4];
-            var preNewtonPlat = l02.platforms[13];
+            var preNewtonPlat = l02.platforms[14];
             float platLeftX = preNewtonPlat.position.x - preNewtonPlat.size.x * 0.5f;
             float platTopY = preNewtonPlat.position.y + preNewtonPlat.size.y * 0.5f;
             Assert(Mathf.Abs(preNewtonCp.position.x - 67.617188f) < 1e-4f &&
@@ -2944,6 +2945,96 @@ namespace ContrastTests
             }
             Assert(allScalesBounded, "RC4_Cam_120ReversalsScaleBounds", "minScale <= scale <= maxScale held across 120 reversals");
             Assert(allStepsContinuous, "RC4_Cam_120ReversalsContinuous", "Position and scale remained continuous across 120 reversals");
+        }
+
+        private static void Test_DemoLobbyMiniGame_FullLoop_Suite()
+        {
+            Console.WriteLine("\n[RUNNING] Test_DemoLobbyMiniGame_FullLoop_Suite...");
+
+            string pathDemo = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "..", "..", "..", "..", "..", "Assets", "Resources", "Levels", "DemoLobbyLevel.json");
+            if (!File.Exists(pathDemo))
+                pathDemo = Path.Combine(Directory.GetCurrentDirectory(), "Assets", "Resources", "Levels", "DemoLobbyLevel.json");
+            if (!File.Exists(pathDemo))
+                pathDemo = Path.Combine(Directory.GetCurrentDirectory(), "..", "Assets", "Resources", "Levels", "DemoLobbyLevel.json");
+
+            Assert(File.Exists(pathDemo), "DemoLobby_FileExists", "DemoLobbyLevel.json exists in Assets/Resources/Levels");
+            string rawJson = File.ReadAllText(pathDemo);
+            LevelData demoData = DeserializeLevelData(rawJson);
+
+            Assert(demoData != null, "DemoLobby_JsonParse", "DemoLobbyLevel.json deserializes into LevelData");
+            Assert(demoData.levelId == "DemoLobbyLevel", "DemoLobby_LevelId", "LevelId is DemoLobbyLevel");
+            Assert(demoData.platforms != null && demoData.platforms.Length == 5, "DemoLobby_PlatformsCount", "DemoLobbyLevel has 5 fixed platforms");
+            Assert(demoData.collectibles != null && demoData.collectibles.Length == 1, "DemoLobby_CollectibleCount", "DemoLobbyLevel has 1 Quang Diem collectible");
+            Assert(demoData.newton != null && demoData.newton.enabled, "DemoLobby_NewtonEnabled", "DemoLobbyLevel has Newton chamber enabled");
+            Assert(demoData.newton.i == 2 && demoData.newton.k == 4, "DemoLobby_NewtonPair_2_4", "DemoLobbyLevel Newton fringe pair is (i = 2, k = 4)");
+
+            // Verify platform logical colors: [0] Universal (255), [1] White Wall (0), [2] Gray Bridge (127), [3] Black Pedestal (212), [4] White Newton Stage (0)
+            Assert(ColorClassifier.Classify(demoData.platforms[0].rawGrayscaleColor) == LogicalColor.Universal, "DemoLobby_Plat0_Universal", "Platform 0 is Universal floor (255)");
+            Assert(ColorClassifier.Classify(demoData.platforms[1].rawGrayscaleColor) == LogicalColor.White, "DemoLobby_Plat1_WhiteWall", "Platform 1 is White wall (0)");
+            Assert(ColorClassifier.Classify(demoData.platforms[2].rawGrayscaleColor) == LogicalColor.Gray, "DemoLobby_Plat2_GrayBridge", "Platform 2 is Gray bridge (127)");
+            Assert(ColorClassifier.Classify(demoData.platforms[3].rawGrayscaleColor) == LogicalColor.Black, "DemoLobby_Plat3_BlackPedestal", "Platform 3 is Black pedestal (212)");
+            Assert(ColorClassifier.Classify(demoData.platforms[4].rawGrayscaleColor) == LogicalColor.White, "DemoLobby_Plat4_WhiteStage", "Platform 4 is White Newton stage (0)");
+
+            // Verify character height >= 1/3 of DemoViewport height (458 px) and wide map width >= 3840 px
+            float minCharHeight = Contrast.UI.MainMenuUI.DemoViewportHeightPx / 3f;
+            Assert(Contrast.UI.MainMenuUI.DemoCharacterHeightPx >= minCharHeight,
+                "DemoLobby_CharacterHeightAtLeastOneThirdViewport",
+                $"Character height ({Contrast.UI.MainMenuUI.DemoCharacterHeightPx:F1} px) >= 1/3 of DemoViewport height ({minCharHeight:F1} px)");
+
+            float mapWidthPx = demoData.platforms[0].size.x * Contrast.UI.MainMenuUI.DemoPixelsPerUnit;
+            Assert(mapWidthPx >= Contrast.UI.MainMenuUI.DemoViewportWidthPx * 4.5f,
+                "DemoLobby_WideMapForCameraFollow",
+                $"Map width ({mapWidthPx:F0} px) is much wider than viewport ({Contrast.UI.MainMenuUI.DemoViewportWidthPx:F0} px) for 2D camera follow");
+
+            // Verify physics & collision pass-through + drop-through + jump reachability + zero-gap foot alignment on DemoLobbyLevel platforms
+            Vector2 pos = demoData.startPos.position.ToVector2();
+            Vector2 size = demoData.startPos.size.ToVector2();
+            LogicalColor col = ColorClassifier.Classify(demoData.startPos.color);
+            Assert(col == LogicalColor.Black, "DemoLobby_SpawnBlack", "Player spawns in Black phase at (-10.25, -4.45)");
+
+            float floorTop = demoData.platforms[0].position.y + demoData.platforms[0].size.y * 0.5f;
+            float spawnFeetY = pos.y - size.y * 0.5f;
+            AssertApprox(floorTop, spawnFeetY, 1e-4f, "DemoLobby_FeetFlushOnFloorTop", "Character feet sit flush on Universal floor top surface without floating");
+
+            // 1. Shift to White -> White wall at x = -6.0 is non-solid (pass-through)
+            col = LogicalColor.White;
+            bool wallSolidForWhite = ColorClassifier.Classify(demoData.platforms[1].rawGrayscaleColor) != col;
+            Assert(!wallSolidForWhite, "DemoLobby_PassThroughWhiteWall", "White wall is pass-through when player shifts to White phase");
+
+            // 2. Jump from Universal floor (top = -4.95) onto Gray Bridge (top = -3.425) with JumpSpeed = 10.8, Gravity = 28.0
+            float grayTop = demoData.platforms[2].position.y + demoData.platforms[2].size.y * 0.5f;
+            float maxJumpApexFeet = floorTop + (10.8f * 10.8f) / (2f * 28.0f);
+            bool graySolidForWhite = ColorClassifier.Classify(demoData.platforms[2].rawGrayscaleColor) != col;
+            Assert(graySolidForWhite && maxJumpApexFeet > grayTop + 0.2f, "DemoLobby_JumpOntoGrayBridge", $"White player jump apex ({maxJumpApexFeet:F2}) clears Gray bridge top ({grayTop:F2}) and lands solidly");
+
+            // 3. Shift to Gray on Gray Bridge -> loses support & drops through onto Black Pedestal (top = -4.375), collecting Quang Diem at (-0.25, -3.85)
+            col = LogicalColor.Gray;
+            bool graySolidForGray = ColorClassifier.Classify(demoData.platforms[2].rawGrayscaleColor) != col;
+            bool blackSolidForGray = ColorClassifier.Classify(demoData.platforms[3].rawGrayscaleColor) != col;
+            float blackTop = demoData.platforms[3].position.y + demoData.platforms[3].size.y * 0.5f;
+            float qdY = demoData.collectibles[0].position.y;
+            Assert(!graySolidForGray && blackSolidForGray, "DemoLobby_DropThroughGrayBridge", "Shifting to Gray makes Gray bridge pass-through and Black pedestal solid");
+            Assert(qdY < grayTop && qdY > blackTop, "DemoLobby_CollectQuangDiemOnDrop", "Quang Diem lies directly in the drop path between Gray bridge and Black pedestal");
+
+            // 4. Jump from Black Pedestal (top = -4.375) and shift to Black -> lands on White Newton Stage (top = -2.9375)
+            float whiteStageTop = demoData.platforms[4].position.y + demoData.platforms[4].size.y * 0.5f;
+            float apexFromPedestal = blackTop + (10.8f * 10.8f) / (2f * 28.0f);
+            col = LogicalColor.Black;
+            bool whiteStageSolidForBlack = ColorClassifier.Classify(demoData.platforms[4].rawGrayscaleColor) != col;
+            Assert(whiteStageSolidForBlack && apexFromPedestal > whiteStageTop + 0.5f, "DemoLobby_JumpToNewtonStage", $"Jump from Black pedestal ({apexFromPedestal:F2}) clears White Newton stage ({whiteStageTop:F2})");
+
+            // 5. Verify new 2-armed Celebrate / AnMung animation clip constants & sprite sheet assets (no 4-arm bug)
+            Assert(Contrast.Presentation.PlayerVisualPresentation.CelebrateFrameCount == 32 &&
+                   Math.Abs(Contrast.Presentation.PlayerVisualPresentation.CelebrateDuration - 0.64f) < 1e-4f &&
+                   (int)Contrast.Presentation.PlayerAnimationState.Celebrate == 6,
+                "DemoLobby_AnMungClipFrameCount32",
+                "PlayerVisualPresentation defines 32-frame 'Celebrate' / 'AnMung' 2-armed celebration animation (0.64s)");
+
+            string celebratePng = Path.Combine(Path.GetDirectoryName(pathDemo) ?? "", "..", "SilhouetteMotion", "Sheets", "Celebrate.png");
+            string celebrateJson = Path.Combine(Path.GetDirectoryName(pathDemo) ?? "", "..", "SilhouetteMotion", "Sheets", "Celebrate.json");
+            Assert(File.Exists(celebratePng) && File.Exists(celebrateJson) && File.ReadAllText(celebrateJson).Contains("\"frameCount\": 32"),
+                "DemoLobby_CelebrateSheetAssetsExist",
+                "Celebrate.png and Celebrate.json (32 frames) exist in Assets/Resources/SilhouetteMotion/Sheets");
         }
 
         private sealed class MockPlatformInputAdapter : IPlatformInputAdapter

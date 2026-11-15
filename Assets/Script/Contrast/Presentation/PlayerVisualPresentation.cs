@@ -13,7 +13,8 @@ namespace Contrast.Presentation
         Jump = 2,
         Fall = 3,
         Landing = 4,
-        Death = 5
+        Death = 5,
+        Celebrate = 6
     }
 
     /// <summary>
@@ -50,13 +51,15 @@ namespace Contrast.Presentation
         public const float MaxAnimatedVisualHeight = CropHeightPx / PixelsPerUnit;  // 1.6015625 units
         public static readonly Vector2 VisualPivot = new Vector2(0.5f, 0.0f);
 
-        // Clip timing constants (from Idle.json, Run.json, Jump.json)
+        // Clip timing constants (from Idle.json, Run.json, Jump.json, Celebrate.json)
         public const int IdleFrameCount = 120;
         public const int RunFrameCount = 32;
         public const int JumpFrameCount = 61;
+        public const int CelebrateFrameCount = 32;
 
         public const float IdleDuration = 2.40f;
         public const float RunDuration = 0.64f;
+        public const float CelebrateDuration = 0.64f;
         public const float JumpAnticipationDuration = 0.06f;
         public const float JumpAirDuration = 0.70f;
         public const float JumpLandingDuration = 0.18f;
@@ -130,10 +133,12 @@ namespace Contrast.Presentation
         private static Sprite[] cachedIdleBodyFrames;
         private static Sprite[] cachedRunBodyFrames;
         private static Sprite[] cachedJumpBodyFrames;
+        private static Sprite[] cachedCelebrateBodyFrames;
 
         private static Sprite[] cachedIdleRimFrames;
         private static Sprite[] cachedRunRimFrames;
         private static Sprite[] cachedJumpRimFrames;
+        private static Sprite[] cachedCelebrateRimFrames;
 
         private static Sprite cachedHaloSprite;
         private static Sprite cachedCoreSprite;
@@ -169,6 +174,7 @@ namespace Contrast.Presentation
                 "Idle" => cachedIdleBodyFrames != null ? cachedIdleBodyFrames.Length : 0,
                 "Run" => cachedRunBodyFrames != null ? cachedRunBodyFrames.Length : 0,
                 "Jump" => cachedJumpBodyFrames != null ? cachedJumpBodyFrames.Length : 0,
+                "Celebrate" or "AnMung" => cachedCelebrateBodyFrames != null ? cachedCelebrateBodyFrames.Length : 0,
                 _ => 0
             };
         }
@@ -676,20 +682,25 @@ namespace Contrast.Presentation
 
         #region SilhouetteMotion Frame Slicing & Sampling
 
-        private static Sprite SampleBodySprite(string mode, float time, out int index)
+        public static Sprite SampleBodySprite(string mode, float time, out int index)
         {
             EnsureSilhouetteFramesLoaded();
+            bool isCelebrate = mode == "Celebrate" || mode == "AnMung";
             Sprite[] frames = mode == "Idle"
                 ? cachedIdleBodyFrames
                 : mode == "Run"
                     ? cachedRunBodyFrames
-                    : cachedJumpBodyFrames;
+                    : isCelebrate
+                        ? cachedCelebrateBodyFrames
+                        : cachedJumpBodyFrames;
 
             float duration = mode == "Idle"
                 ? IdleDuration
                 : mode == "Run"
                     ? RunDuration
-                    : JumpTotalDuration;
+                    : isCelebrate
+                        ? CelebrateDuration
+                        : JumpTotalDuration;
 
             if (frames == null || frames.Length == 0)
             {
@@ -703,14 +714,17 @@ namespace Contrast.Presentation
             return frames[index];
         }
 
-        private static Sprite SampleRimSprite(string mode, int index)
+        public static Sprite SampleRimSprite(string mode, int index)
         {
             EnsureSilhouetteFramesLoaded();
+            bool isCelebrate = mode == "Celebrate" || mode == "AnMung";
             Sprite[] frames = mode == "Idle"
                 ? cachedIdleRimFrames
                 : mode == "Run"
                     ? cachedRunRimFrames
-                    : cachedJumpRimFrames;
+                    : isCelebrate
+                        ? cachedCelebrateRimFrames
+                        : cachedJumpRimFrames;
 
             if (frames == null || frames.Length == 0)
                 return null;
@@ -723,7 +737,8 @@ namespace Contrast.Presentation
         {
             if (cachedIdleBodyFrames != null && cachedIdleBodyFrames.Length == IdleFrameCount && cachedIdleBodyFrames[0] != null &&
                 cachedRunBodyFrames != null && cachedRunBodyFrames.Length == RunFrameCount && cachedRunBodyFrames[0] != null &&
-                cachedJumpBodyFrames != null && cachedJumpBodyFrames.Length == JumpFrameCount && cachedJumpBodyFrames[0] != null)
+                cachedJumpBodyFrames != null && cachedJumpBodyFrames.Length == JumpFrameCount && cachedJumpBodyFrames[0] != null &&
+                cachedCelebrateBodyFrames != null && cachedCelebrateBodyFrames.Length == CelebrateFrameCount && cachedCelebrateBodyFrames[0] != null)
             {
                 return;
             }
@@ -731,6 +746,7 @@ namespace Contrast.Presentation
             SliceSheetOrFallback("Idle", IdleFrameCount, out cachedIdleBodyFrames, out cachedIdleRimFrames);
             SliceSheetOrFallback("Run", RunFrameCount, out cachedRunBodyFrames, out cachedRunRimFrames);
             SliceSheetOrFallback("Jump", JumpFrameCount, out cachedJumpBodyFrames, out cachedJumpRimFrames);
+            SliceSheetOrFallback("Celebrate", CelebrateFrameCount, out cachedCelebrateBodyFrames, out cachedCelebrateRimFrames);
         }
 
         private static void SliceSheetOrFallback(
@@ -743,13 +759,47 @@ namespace Contrast.Presentation
             rimFrames = new Sprite[frameCount];
 
             Texture2D rawSheet = Resources.Load<Texture2D>("SilhouetteMotion/Sheets/" + mode);
+            Color32[] srcPixels = null;
+            int texW = 0;
+            int texH = 0;
+
             if (rawSheet != null)
             {
                 try
                 {
-                    Color32[] srcPixels = rawSheet.GetPixels32();
-                    int texW = rawSheet.width;
-                    int texH = rawSheet.height;
+                    srcPixels = rawSheet.GetPixels32();
+                    texW = rawSheet.width;
+                    texH = rawSheet.height;
+                }
+                catch (Exception)
+                {
+                    srcPixels = null;
+                }
+            }
+
+            if (srcPixels == null && (mode == "Celebrate" || mode == "AnMung"))
+            {
+                try
+                {
+                    srcPixels = SynthesizeCelebrateSheetPixels(frameCount, out texW, out texH);
+                }
+                catch (Exception)
+                {
+                    srcPixels = null;
+                }
+            }
+
+            if (srcPixels != null && texW > 0 && texH > 0)
+            {
+                try
+                {
+                    float sheetScale = Mathf.Max(0.125f, (float)texW / (SheetColumns * SheetCellSizePx));
+                    int cellSize = Mathf.Max(16, Mathf.RoundToInt(SheetCellSizePx * sheetScale));
+                    int cropMinX = Mathf.RoundToInt(CropMinXPx * sheetScale);
+                    int cropMinY = Mathf.RoundToInt(CropMinYBottomPx * sheetScale);
+                    int cropW = Mathf.Max(8, Mathf.RoundToInt(CropWidthPx * sheetScale));
+                    int cropH = Mathf.Max(8, Mathf.RoundToInt(CropHeightPx * sheetScale));
+                    float effectivePpu = PixelsPerUnit * sheetScale;
 
                     Color32[] bodyPixels = new Color32[srcPixels.Length];
                     Color32[] rimPixels = new Color32[srcPixels.Length];
@@ -762,20 +812,20 @@ namespace Contrast.Presentation
                         bodyPixels[i] = new Color32(255, 255, 255, a);
                     }
 
-                    // 2. Build 2-pixel perimeter rim stroke around the silhouette within each 256x256 cell
+                    // 2. Build 2-pixel perimeter rim stroke around the silhouette within each cell
                     for (int f = 0; f < frameCount; f++)
                     {
-                        int cellX = (f % SheetColumns) * SheetCellSizePx;
+                        int cellX = (f % SheetColumns) * cellSize;
                         int cellYTop = f / SheetColumns;
-                        int cellY = texH - (cellYTop + 1) * SheetCellSizePx;
-                        if (cellY < 0 || cellX + SheetCellSizePx > texW)
+                        int cellY = texH - (cellYTop + 1) * cellSize;
+                        if (cellY < 0 || cellX + cellSize > texW)
                             continue;
 
-                        for (int y = 2; y < SheetCellSizePx - 2; y++)
+                        for (int y = 2; y < cellSize - 2; y++)
                         {
                             int py = cellY + y;
                             int rowOffset = py * texW;
-                            for (int x = 2; x < SheetCellSizePx - 2; x++)
+                            for (int x = 2; x < cellSize - 2; x++)
                             {
                                 int px = cellX + x;
                                 int idx = rowOffset + px;
@@ -826,20 +876,20 @@ namespace Contrast.Presentation
 
                     for (int i = 0; i < frameCount; i++)
                     {
-                        int cellX = (i % SheetColumns) * SheetCellSizePx;
-                        int cellY = texH - (i / SheetColumns + 1) * SheetCellSizePx;
+                        int cellX = (i % SheetColumns) * cellSize;
+                        int cellY = texH - (i / SheetColumns + 1) * cellSize;
 
                         Rect cropRect = new Rect(
-                            cellX + CropMinXPx,
-                            cellY + CropMinYBottomPx,
-                            CropWidthPx,
-                            CropHeightPx);
+                            Mathf.Clamp(cellX + cropMinX, 0, texW - cropW),
+                            Mathf.Clamp(cellY + cropMinY, 0, texH - cropH),
+                            cropW,
+                            cropH);
 
                         bodyFrames[i] = Sprite.Create(
                             bodyTex,
                             cropRect,
                             VisualPivot,
-                            PixelsPerUnit,
+                            effectivePpu,
                             0,
                             SpriteMeshType.FullRect);
                         bodyFrames[i].name = $"{mode}_{i:D3}";
@@ -848,7 +898,7 @@ namespace Contrast.Presentation
                             rimTex,
                             cropRect,
                             VisualPivot,
-                            PixelsPerUnit,
+                            effectivePpu,
                             0,
                             SpriteMeshType.FullRect);
                         rimFrames[i].name = $"{mode}_Rim_{i:D3}";
@@ -863,6 +913,121 @@ namespace Contrast.Presentation
 
             // Deterministic fallback matching SilhouetteMotion cell crop (168 x 205 px @ 128 PPU, pivot (0.5, 0.0))
             BuildProceduralFallbackFrames(mode, frameCount, out bodyFrames, out rimFrames);
+        }
+
+        /// <summary>
+        /// Synthesizes the 32-frame Celebrate ("AnMung") sprite sheet directly from the authoritative
+        /// SilhouetteMotion character model (identical head, tapered torso, and grounded legs; ONLY the
+        /// 2 arms move upward from the shoulders into a joyful celebration wave).
+        /// </summary>
+        private static Color32[] SynthesizeCelebrateSheetPixels(int frameCount, out int texW, out int texH)
+        {
+            const int cellSize = 128; // 0.5x sheet scale (1024 x 512) for fast runtime synthesis
+            int rows = (frameCount + SheetColumns - 1) / SheetColumns;
+            texW = SheetColumns * cellSize;
+            texH = rows * cellSize;
+            Color32[] pixels = new Color32[texW * texH];
+
+            for (int f = 0; f < frameCount; f++)
+            {
+                float phase = (f / (float)frameCount) * Mathf.PI * 2f;
+                float v = Mathf.Sin(phase);
+                float sx = 1f - 0.018f * v * 0.45f;
+                float sy = 1f + 0.018f * v;
+                float hip = -1.2f * (0.5f - 0.5f * Mathf.Cos(phase * 2f));
+                float wave = Mathf.Sin(phase);
+
+                int cellX = (f % SheetColumns) * cellSize;
+                int cellYTop = f / SheetColumns;
+                int cellYBottom = texH - (cellYTop + 1) * cellSize;
+
+                // Legs in model coords: s in {-1, +1}, quadratic Bezier from (s*6, -29+hip) -> (s*10, -17+hip) -> (s*12, -5), r=5
+                // Arms in hip-relative coords (y_hip = my - (-29+hip)): from (s*8, -28) -> (s*(18.5+wave*2.5), -42-wave*1.6) -> (s*(24.5+wave*5), -59.5-|wave|*3.8), r=4.5
+                Vector2 armL0 = new Vector2(-8f, -28f);
+                Vector2 armL1 = new Vector2(-(18.5f + wave * 2.5f), -42f - wave * 1.6f);
+                Vector2 armL2 = new Vector2(-(24.5f + wave * 5.0f), -59.5f - Mathf.Abs(wave) * 3.8f);
+
+                Vector2 armR0 = new Vector2(8f, -28f);
+                Vector2 armR1 = new Vector2(18.5f + wave * 2.5f, -42f - wave * 1.6f);
+                Vector2 armR2 = new Vector2(24.5f + wave * 5.0f, -59.5f - Mathf.Abs(wave) * 3.8f);
+
+                Vector2 legL0 = new Vector2(-6f, -29f + hip);
+                Vector2 legL1 = new Vector2(-10f, -17f + hip);
+                Vector2 legL2 = new Vector2(-12f, -5f);
+
+                Vector2 legR0 = new Vector2(6f, -29f + hip);
+                Vector2 legR1 = new Vector2(10f, -17f + hip);
+                Vector2 legR2 = new Vector2(12f, -5f);
+
+                for (int ly = 14; ly < cellSize - 6; ly++)
+                {
+                    int py = cellYBottom + ly;
+                    float canvasY = (cellSize - 1 - ly) * 2f; // mapped to 256-cell canvas coords
+                    float my = (canvasY - 224f) / (2f * sy);
+                    float hy = my - (-29f + hip);
+
+                    for (int lx = 20; lx < cellSize - 20; lx++)
+                    {
+                        int px = cellX + lx;
+                        float canvasX = lx * 2f;
+                        float mx = (canvasX - 128f) / (2f * sx);
+                        Vector2 mp = new Vector2(mx, my);
+                        Vector2 hp = new Vector2(mx, hy);
+
+                        // Signed distance to head circle at (0, -51), r = 14
+                        float dHead = Vector2.Distance(hp, new Vector2(0f, -51f)) - 14f;
+
+                        // Signed distance to tapered torso: hy in [-34.5, 0], halfWidth tapers from 15 at hy=0 to 10 at hy=-29
+                        float dTorso = 99f;
+                        if (hy <= 0.5f && hy >= -35.5f)
+                        {
+                            float u = Mathf.Clamp01(-hy / 29f);
+                            float halfW = Mathf.Lerp(15f, 10f, u * u);
+                            float topCapY = -29f - 5.5f * Mathf.Max(0f, 1f - (mx * mx) / 100f);
+                            float dx = Mathf.Abs(mx) - halfW;
+                            float dy = Mathf.Max(hy - 0f, topCapY - hy);
+                            dTorso = Mathf.Max(dx, dy);
+                        }
+
+                        // Signed distance to legs (r = 5.0) & raised celebration arms (r = 4.5)
+                        float dLegL = DistanceToQuadBezier(mp, legL0, legL1, legL2) - 5.0f;
+                        float dLegR = DistanceToQuadBezier(mp, legR0, legR1, legR2) - 5.0f;
+                        float dArmL = DistanceToQuadBezier(hp, armL0, armL1, armL2) - 4.5f;
+                        float dArmR = DistanceToQuadBezier(hp, armR0, armR1, armR2) - 4.5f;
+
+                        float dMin = Mathf.Min(Mathf.Min(dHead, dTorso), Mathf.Min(Mathf.Min(dLegL, dLegR), Mathf.Min(dArmL, dArmR)));
+                        if (dMin < 0.75f)
+                        {
+                            byte a = (byte)Mathf.Clamp(Mathf.RoundToInt(Mathf.Clamp01(0.75f - dMin) * 255f), 0, 255);
+                            if (a > 0)
+                                pixels[py * texW + px] = new Color32(136, 137, 135, a);
+                        }
+                    }
+                }
+            }
+
+            return pixels;
+        }
+
+        private static float DistanceToQuadBezier(Vector2 p, Vector2 a, Vector2 b, Vector2 c)
+        {
+            float minDistSq = float.MaxValue;
+            Vector2 prev = a;
+            const int steps = 8;
+            for (int i = 1; i <= steps; i++)
+            {
+                float t = i / (float)steps;
+                float inv = 1f - t;
+                Vector2 cur = inv * inv * a + 2f * inv * t * b + t * t * c;
+                Vector2 seg = cur - prev;
+                float lenSq = seg.sqrMagnitude;
+                float proj = lenSq > 1e-5f ? Mathf.Clamp01(Vector2.Dot(p - prev, seg) / lenSq) : 0f;
+                Vector2 closest = prev + seg * proj;
+                float dSq = (p - closest).sqrMagnitude;
+                if (dSq < minDistSq) minDistSq = dSq;
+                prev = cur;
+            }
+            return Mathf.Sqrt(minDistSq);
         }
 
         private static void BuildProceduralFallbackFrames(

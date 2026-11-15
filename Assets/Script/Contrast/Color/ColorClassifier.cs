@@ -51,8 +51,8 @@ namespace Contrast.Color
             switch (logical)
             {
                 case LogicalColor.Universal:
-                    // Gray-blue structural tint for Universal/FIXED (255) matching HTML (#28323b)
-                    return new UnityEngine.Color(0.157f, 0.196f, 0.231f, 1f);
+                    // Yellow visual display for Universal/FIXED (255) while raw property remains 255
+                    return new UnityEngine.Color(0.95f, 0.78f, 0.18f, 1f);
 
                 case LogicalColor.White:
                     return UnityEngine.Color.white;

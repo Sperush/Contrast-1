@@ -43,7 +43,7 @@ namespace Contrast.Editor
             if (!Directory.Exists(sheetsDir))
                 return;
 
-            foreach (string mode in new[] { "Idle", "Run", "Jump" })
+            foreach (string mode in new[] { "Idle", "Run", "Jump", "Celebrate" })
             {
                 string texPath = $"{sheetsDir}/{mode}.png";
                 var ti = AssetImporter.GetAtPath(texPath) as TextureImporter;
@@ -62,6 +62,8 @@ namespace Contrast.Editor
                     ti.SaveAndReimport();
                 }
             }
+
+            GetOrCreateClip($"{rootDir}/Celebrate.anim", 0.64f, 32, true);
 
             string controllerPath = $"{rootDir}/SilhouettePlayerAnimator.controller";
             if (AssetDatabase.LoadAssetAtPath<RuntimeAnimatorController>(controllerPath) != null)

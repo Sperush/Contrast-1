@@ -1,0 +1,125 @@
+{
+  "startPos": {
+    "position": {
+      "x": -10.25,
+      "y": -4.45
+    },
+    "size": {
+      "x": 0.625,
+      "y": 1.0
+    },
+    "color": 212.0
+  },
+  "checkPoint": [],
+  "end": null,
+  "spawnPoint": null,
+  "cameraBoundary": {
+    "position": {
+      "x": 0.0,
+      "y": -3.2
+    },
+    "size": {
+      "x": 26.0,
+      "y": 8.0
+    }
+  },
+  "platforms": [
+    {
+      "position": {
+        "x": 0.0,
+        "y": -5.125
+      },
+      "size": {
+        "x": 24.0,
+        "y": 0.35
+      },
+      "rawGrayscaleColor": 255.0
+    },
+    {
+      "position": {
+        "x": -6.0,
+        "y": -3.7
+      },
+      "size": {
+        "x": 0.45,
+        "y": 2.5
+      },
+      "rawGrayscaleColor": 0.0
+    },
+    {
+      "position": {
+        "x": -1.0,
+        "y": -3.55
+      },
+      "size": {
+        "x": 4.8,
+        "y": 0.25
+      },
+      "rawGrayscaleColor": 127.0
+    },
+    {
+      "position": {
+        "x": -0.2,
+        "y": -4.55
+      },
+      "size": {
+        "x": 4.2,
+        "y": 0.25
+      },
+      "rawGrayscaleColor": 212.0
+    },
+    {
+      "position": {
+        "x": 5.8,
+        "y": -3.35
+      },
+      "size": {
+        "x": 6.0,
+        "y": 0.25
+      },
+      "rawGrayscaleColor": 0.0
+    }
+  ],
+  "newton": {
+    "cx": 1048.0,
+    "cy": -428.8,
+    "i": 2,
+    "k": 4,
+    "R": 1500.0,
+    "lambda": 550.0,
+    "orbitStart": "auto",
+    "rails": {
+      "K": {
+        "width": 136.0,
+        "period": 8.0,
+        "angleDeg": 0.0,
+        "direction": 1
+      },
+      "I": {
+        "width": 78.0,
+        "period": 6.5,
+        "angleDeg": 180.0,
+        "direction": -1
+      }
+    },
+    "enabled": true,
+    "vestibuleId": "demo_lobby_newton"
+  },
+  "collectibles": [
+    {
+      "id": "demo_lobby_quang_diem_1",
+      "kind": "collectible",
+      "position": {
+        "x": -0.25,
+        "y": -3.95
+      },
+      "size": {
+        "x": 0.35,
+        "y": 0.35
+      }
+    }
+  ],
+  "deathY": -12.0,
+  "levelId": "DemoLobbyLevel",
+  "levelName": "Mô phỏng hướng dẫn sảnh chờ"
+}

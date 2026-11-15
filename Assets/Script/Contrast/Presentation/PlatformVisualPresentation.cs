@@ -44,10 +44,10 @@ namespace Contrast.Presentation
         private static readonly Color BlackBottom = new Color(0.051f, 0.078f, 0.122f, 1f);
         private static readonly Color BlackBorder = new Color(0.322f, 0.380f, 0.451f, 0.35f);
 
-        // Universal / Structural FIXED (255): Gray-Blue #28323b -> #151c24 matching HTML drawObject (c.structural)
-        public static readonly Color UniversalTop = new Color(0.157f, 0.196f, 0.231f, 1f);    // #28323b
-        public static readonly Color UniversalBottom = new Color(0.082f, 0.110f, 0.141f, 1f); // #151c24
-        public static readonly Color UniversalBorder = new Color(0.835f, 0.882f, 0.910f, 0.55f); // rgba(213,225,232,0.55)
+        // Universal / Structural FIXED (255): Yellow / Gold display while raw property remains 255
+        public static readonly Color UniversalTop = new Color(0.96f, 0.80f, 0.22f, 1f);
+        public static readonly Color UniversalBottom = new Color(0.82f, 0.62f, 0.10f, 1f);
+        public static readonly Color UniversalBorder = new Color(1.00f, 0.92f, 0.45f, 0.90f);
 
         public Color CurrentBorderColor => borderRenderer != null ? borderRenderer.color : Color.clear;
         public Sprite CurrentSurfaceSprite => surfaceRenderer != null ? surfaceRenderer.sprite : null;
@@ -393,16 +393,16 @@ namespace Contrast.Presentation
             };
 
             Color[] pixels = new Color[w * h];
-            Color hatchTint = new Color(0.875f, 0.910f, 0.929f, 1f); // #dfe8ed
+            Color hatchTint = new Color(1.00f, 0.96f, 0.68f, 1f);
             for (int y = 0; y < h; y++)
             {
                 float t = (float)y / (h - 1);
                 Color baseGrad = Color.Lerp(UniversalBottom, UniversalTop, t);
                 for (int x = 0; x < w; x++)
                 {
-                    // Subtle structural diagonal hatch lines matching HTML c.structural hatch
+                    // Subtle diagonal hatch lines on yellow universal surface
                     bool isHatch = ((x - y + 128) % 20) < 2;
-                    pixels[y * w + x] = isHatch ? Color.Lerp(baseGrad, hatchTint, 0.16f) : baseGrad;
+                    pixels[y * w + x] = isHatch ? Color.Lerp(baseGrad, hatchTint, 0.22f) : baseGrad;
                 }
             }
 

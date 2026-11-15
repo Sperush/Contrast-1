@@ -82,17 +82,6 @@ namespace Contrast.Presentation
                     phaseTuner = uiGo.AddComponent<PhaseTunerUI>();
                 }
             }
-
-            // 3. Newton Rings Optical Apparatus
-            if (newtonApparatus == null)
-            {
-                newtonApparatus = FindAnyObjectByType<NewtonRingsPresentation>();
-                if (newtonApparatus == null)
-                {
-                    GameObject newtonGo = new GameObject("NewtonRingsApparatus");
-                    newtonApparatus = newtonGo.AddComponent<NewtonRingsPresentation>();
-                }
-            }
         }
 
         private void ConfigureCameraPostProcessing()

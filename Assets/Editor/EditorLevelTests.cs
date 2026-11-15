@@ -1614,7 +1614,7 @@ namespace Contrast.Tests
                 }
                 else if (lvl == "L02")
                 {
-                    AssertTrue(sanitized.platforms != null && sanitized.platforms.Length == 15, "L02_BlockCount_15", $"L02 has 15 terrain blocks (actual: {sanitized.platforms?.Length})");
+                    AssertTrue(sanitized.platforms != null && sanitized.platforms.Length == 16, "L02_BlockCount_16", $"L02 has 16 terrain blocks (actual: {sanitized.platforms?.Length})");
                     int w = 0, g = 0, b = 0, f = 0;
                     foreach (var p in sanitized.platforms)
                     {
@@ -1625,7 +1625,7 @@ namespace Contrast.Tests
                     }
                     AssertTrue(w == 3, "L02_WhiteBlocks_3", $"L02 White blocks == 3 (actual: {w})");
                     AssertTrue(g == 2, "L02_GrayBlocks_2", $"L02 Gray blocks == 2 (actual: {g})");
-                    AssertTrue(b == 8, "L02_BlackBlocks_8", $"L02 Black blocks == 8 (actual: {b})");
+                    AssertTrue(b == 9, "L02_BlackBlocks_9", $"L02 Black blocks == 9 (actual: {b})");
                     AssertTrue(f == 2, "L02_FixedBlocks_2", $"L02 Fixed blocks == 2 (actual: {f})");
 
                     AssertTrue(sanitized.checkPoint != null && sanitized.checkPoint.Length == 5, "L02_Checkpoints_5", "L02 has 5 checkpoints including pre-Newton checkpoint (+ startPos = 6)");
@@ -2042,7 +2042,7 @@ namespace Contrast.Tests
             LevelData data = JsonUtility.FromJson<LevelData>(rawJson);
             AssertTrue(data != null, "Test1_L02_Data_NotNull", "L02 parsed to LevelData");
             AssertTrue(data.levelId == "L02", "Test1_L02_LevelId", "L02 levelId is 'L02'");
-            AssertTrue(data.platforms != null && data.platforms.Length == 15, "Test1_L02_Platforms15", "L02 contains 15 terrain blocks");
+            AssertTrue(data.platforms != null && data.platforms.Length == 16, "Test1_L02_Platforms16", "L02 contains 16 terrain blocks");
             AssertTrue(data.newton != null, "Test1_L02_Newton_NotNull", "L02 has newton configuration");
             AssertTrue(data.newton.cx == 5110f && data.newton.cy == 528f, "Test1_L02_Newton_Center", "L02 center is (5110, 528)");
             AssertTrue(data.newton.i == 2 && data.newton.k == 4, "Test1_L02_Newton_Fringes", "L02 fringe orders are i=2, k=4");
@@ -2243,7 +2243,7 @@ namespace Contrast.Tests
             float rightBoundL01 = calcBoundsL01.position.x + calcBoundsL01.size.x * 0.5f;
             AssertTrue(rightBoundL01 >= rawL01.newton.cx + 8.5f, "Task4_SanitizerBounds_IncludesNewton", $"Sanitizer camera boundary right edge ({rightBoundL01:F2}) includes Newton chamber");
 
-            // ── TASK 5: Special Columns Gray-Blue (Universal 255) ─────────────────
+            // ── TASK 5: Special Columns Yellow (Universal 255) ─────────────────
             GameObject uniGo = new GameObject("TestFinalReview_UniversalColumn");
             ColorPlatform uniPlat = uniGo.AddComponent<ColorPlatform>();
             uniPlat.Initialize(new Vector2(0f, 0f), new Vector2(2f, 6f), 255f);
@@ -2254,8 +2254,8 @@ namespace Contrast.Tests
             AssertTrue(uniPlat.Logical == LogicalColor.Universal, "Task5_Universal_LogicalState", "Platform with rawGrayscaleColor=255 has LogicalColor.Universal");
             AssertTrue(uniSurf != null && uniBorder != null, "Task5_Universal_RenderersExist", "Universal platform Surface and Border renderers exist");
             UnityEngine.Color centerUni = uniSurf.sprite.texture.GetPixel(32, 32);
-            AssertTrue(centerUni.b > centerUni.r && centerUni.r < 0.25f, "Task5_Universal_GrayBlueTexture", $"Universal surface texture is dark gray-blue (R={centerUni.r:F3}, G={centerUni.g:F3}, B={centerUni.b:F3})");
-            AssertApproximately(0.835f, uniBorder.color.r, 0.03f, "Task5_Universal_BorderColorR", "Universal border matches cool gray-blue rgba(213,225,232,0.55)");
+            AssertTrue(centerUni.r > 0.7f && centerUni.g > 0.5f && centerUni.b < 0.35f, "Task5_Universal_YellowTexture", $"Universal surface texture is yellow (R={centerUni.r:F3}, G={centerUni.g:F3}, B={centerUni.b:F3})");
+            AssertApproximately(1.00f, uniBorder.color.r, 0.05f, "Task5_Universal_BorderColorR", "Universal border matches warm yellow");
 
             // Verify OrbitPlatform_K is visually White AND LogicalColor.White (passable by White player)
             GameObject kGo = new GameObject("OrbitPlatform_K_White");
@@ -4448,12 +4448,34 @@ namespace Contrast.Tests
             directMenu.Show(true);
             Transform cardsRootTr = directMenuGo.transform.Find("Canvas/Panel/MainCardsRoot");
             Transform showcaseTr = directMenuGo.transform.Find("Canvas/Panel/GameplayShowcaseCard/DemoViewport/DemoCharacter");
+            Transform newtonApparatusTr = directMenuGo.transform.Find("Canvas/Panel/GameplayShowcaseCard/DemoViewport/DemoNewtonApparatus");
+            Transform irisMaskTr = directMenuGo.transform.Find("Canvas/Panel/GameplayShowcaseCard/DemoViewport/DemoCircularIrisMask");
             Transform settingsBtnTr = directMenuGo.transform.Find("Canvas/Panel/PlaySubMenuPanel/SettingsButton");
             Transform exitBtnTr = directMenuGo.transform.Find("Canvas/Panel/PlaySubMenuPanel/ExitButton");
             AssertTrue(directMenu.IsPlaySubMenuOpen && (cardsRootTr == null || !cardsRootTr.gameObject.activeSelf),
                 "MainMenu_01_DirectGameplayOnly", "MainMenuUI directly shows only the Gameplay selection screen with MainCardsRoot hidden");
-            AssertTrue(showcaseTr != null && settingsBtnTr != null && exitBtnTr != null,
-                "MainMenu_02_AnimatedDemoAndSettingsExitButtons", "MainMenuUI builds animated gameplay showcase, Settings button, and Exit button");
+            AssertTrue(showcaseTr != null && newtonApparatusTr != null && irisMaskTr != null && settingsBtnTr != null && exitBtnTr != null,
+                "MainMenu_02_AnimatedDemoAndSettingsExitButtons", "MainMenuUI builds animated gameplay showcase, 5-ring Newton apparatus, circular iris mask, Settings button, and Exit button");
+            AssertTrue(directMenu.LoadedDemoLevelData != null && directMenu.LoadedDemoLevelData.newton != null &&
+                       directMenu.LoadedDemoLevelData.newton.i == 2 && directMenu.LoadedDemoLevelData.newton.k == 4,
+                "MainMenu_02b_DemoLobbyLevelLoaded", "MainMenuUI loads DemoLobbyLevel.json with Newton pair (i=2, k=4)");
+            RectTransform charRt = showcaseTr != null ? showcaseTr.GetComponent<RectTransform>() : null;
+            RectTransform bodyRt = showcaseTr != null ? showcaseTr.Find("OpticalBody")?.GetComponent<RectTransform>() : null;
+            AssertTrue(charRt != null && charRt.sizeDelta.y >= Contrast.UI.MainMenuUI.DemoViewportHeightPx / 3f &&
+                       bodyRt != null && Mathf.Abs(bodyRt.anchorMin.y) < 1e-4f && Mathf.Abs(bodyRt.anchorMax.y) < 1e-4f,
+                "MainMenu_02c_DemoCharacterSizeAndGroundedAnchors", "DemoCharacter height is >= 1/3 of DemoViewport height and child body is bottom-anchored (no floating)");
+            AssertTrue(showcaseTr != null &&
+                       showcaseTr.Find("RaisedArmLeft") == null &&
+                       showcaseTr.Find("RaisedArmRight") == null &&
+                       Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("AnMung") == 32 &&
+                       Contrast.Presentation.PlayerVisualPresentation.SampleBodySprite("AnMung", 0.2f, out _) != null,
+                "MainMenu_02e_AnMungTwoArmsOnlyNoDuplicateArmObjects", "DemoCharacter uses 2-armed 'AnMung' ('Celebrate') animation and has no duplicate RaisedArmLeft/RaisedArmRight UI objects");
+            Vector2 camBefore = directMenu.CurrentDemoCameraPosPx;
+            for (int step = 0; step < 30; step++)
+                directMenu.StepDemoSimulationForTest(0.05f);
+            Vector2 camAfter = directMenu.CurrentDemoCameraPosPx;
+            AssertTrue(camAfter.x > camBefore.x + 20f,
+                "MainMenu_02d_DemoCameraFollowsCharacter", $"Demo camera smoothly follows character across wide map (camX: {camBefore.x:F1} -> {camAfter.x:F1})");
             directMenu.OpenSettings();
             AssertTrue(directMenu.IsSettingsOpen, "MainMenu_03_SettingsModalOpens", "MainMenuUI Settings modal opens");
             directMenu.CloseSettings();

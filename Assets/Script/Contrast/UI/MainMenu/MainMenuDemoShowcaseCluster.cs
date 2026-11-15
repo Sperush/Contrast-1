@@ -1,0 +1,1149 @@
+namespace Contrast.UI
+{
+    using System.Collections.Generic;
+    using Contrast.Color;
+    using Contrast.Data;
+    using Contrast.Presentation;
+    using UnityEngine;
+    using UnityEngine.UI;
+    using Color = UnityEngine.Color;
+
+    /// <summary>
+    /// Cluster 4b: Right Column Live Animated Gameplay Showcase Stage.
+    /// Builds and updates the viewport, scrolling optical grid, dynamic platforms,
+    /// Quang Điểm collectible, 5-ring Newton apparatus, real SilhouetteMotion character
+    /// (including the 2-armed <c>Celebrate</c> / <c>AnMung</c> animation), circular iris-in
+    /// transition overlay, and synchronized mini phase bar.
+    /// </summary>
+    internal sealed class MainMenuDemoShowcaseCluster
+    {
+        public MainMenuDemoSimulation Simulation { get; } = new MainMenuDemoSimulation();
+
+        public RectTransform CharacterRectTransform => demoRunnerRoot;
+        public float TotalTime { get; private set; }
+
+        private RectTransform demoRunnerRoot;
+        private Image demoCharacterHaloImg;
+        private Image demoCharacterBodyImg;
+        private Image demoCharacterRimImg;
+        private Image demoHeadImg;
+        private Image demoTorsoImg;
+        private Image demoEyeImg;
+        private RectTransform demoLegLeft;
+        private RectTransform demoLegRight;
+        private Image demoLegLeftImg;
+        private Image demoLegRightImg;
+        private RectTransform demoShiftPulseRt;
+        private Image demoShiftPulseImg;
+
+        private Image demoWhiteGateImg;
+        private RectTransform demoWhiteGateTagRt;
+        private Vector2 demoWhiteGateTagWorldPx;
+        private Image demoGrayBridgeImg;
+        private Image demoWhiteStepImg;
+        private RectTransform demoQuangDiemRt;
+        private Image demoQuangDiemImg;
+
+        private readonly List<RectTransform> demoGridVLines = new List<RectTransform>();
+        private readonly List<float> demoGridVBaseX = new List<float>();
+        private readonly List<RectTransform> demoGridHLines = new List<RectTransform>();
+        private readonly List<float> demoGridHBaseY = new List<float>();
+
+        private RectTransform demoNewtonRootRt;
+        private readonly List<Image> demoNewtonRingImgs = new List<Image>();
+        private readonly List<RectTransform> demoNewtonRingRts = new List<RectTransform>();
+        private readonly RectTransform[] demoNewtonPointRts = new RectTransform[3];
+        private readonly Image[] demoNewtonPointImgs = new Image[3];
+        private RectTransform demoConnectLineBRt;
+        private Image demoConnectLineBImg;
+        private RectTransform demoConnectLineSmallBRt;
+        private Image demoConnectLineSmallBImg;
+        private GameObject demoNewtonFormulaBadgeGo;
+        private Text demoNewtonFormulaText;
+        private RectTransform demoReachPointerRt;
+        private Image demoReachPointerImg;
+
+        private GameObject demoIrisRootGo;
+        private RectTransform demoIrisApertureRt;
+        private RectTransform demoIrisTopBarRt;
+        private RectTransform demoIrisBottomBarRt;
+        private RectTransform demoIrisLeftBarRt;
+        private RectTransform demoIrisRightBarRt;
+
+        private RectTransform demoPhaseThumbRt;
+        private Image demoPhaseThumbImg;
+        private Text demoPhaseBadgeText;
+        private Image demoPhaseBadgeBg;
+        private Text demoRuleCaptionText;
+        private Text demoBotInputBadgeText;
+
+        private float demoAnimClock;
+        private int lastDemoColorIndex = -1;
+        private float shiftPulseTimer = 99f;
+
+        public void Build(Transform parent)
+        {
+            Simulation.Platforms.Clear();
+            demoNewtonRingImgs.Clear();
+            demoNewtonRingRts.Clear();
+            demoGridVLines.Clear();
+            demoGridVBaseX.Clear();
+            demoGridHLines.Clear();
+            demoGridHBaseY.Clear();
+
+            Simulation.InitializeLevelData();
+            LevelData demoLevelData = Simulation.LevelData;
+
+            GameObject stageCard = MainMenuUIBuilder.NewUI("GameplayShowcaseCard", parent);
+            Image stageBg = stageCard.AddComponent<Image>();
+            LabStyleUI.ApplySlicedSprite(stageBg, LabStyleUI.GetCardSprite(), true, -7f);
+
+            RectTransform stageRt = stageCard.GetComponent<RectTransform>();
+            stageRt.sizeDelta = new Vector2(856f, 736f);
+            stageRt.anchoredPosition = new Vector2(452f, -64f);
+
+            MainMenuUIBuilder.CreateSubLabel(
+                stageCard.transform,
+                "ShowcaseTitle",
+                "Mô phỏng trực quan cơ chế đổi pha màu",
+                new Vector2(-120f, 324f),
+                new Vector2(540f, 32f),
+                17,
+                FontStyle.Bold,
+                LabStyleUI.TextPrimary,
+                TextAnchor.MiddleLeft);
+
+            GameObject phaseBadge = MainMenuUIBuilder.NewUI("LivePhaseBadge", stageCard.transform);
+            demoPhaseBadgeBg = phaseBadge.AddComponent<Image>();
+            LabStyleUI.ApplySlicedSprite(demoPhaseBadgeBg, LabStyleUI.GetPillSprite(), false);
+            RectTransform pbRt = phaseBadge.GetComponent<RectTransform>();
+            pbRt.sizeDelta = new Vector2(216f, 38f);
+            pbRt.anchoredPosition = new Vector2(286f, 324f);
+
+            GameObject pbTxtGo = MainMenuUIBuilder.NewUI("BadgeLabel", phaseBadge.transform);
+            demoPhaseBadgeText = pbTxtGo.AddComponent<Text>();
+            demoPhaseBadgeText.font = MainMenuUIBuilder.GetFont();
+            demoPhaseBadgeText.text = "Pha hiện tại: Đen";
+            demoPhaseBadgeText.fontSize = 13;
+            demoPhaseBadgeText.fontStyle = FontStyle.Bold;
+            demoPhaseBadgeText.alignment = TextAnchor.MiddleCenter;
+            demoPhaseBadgeText.color = Color.white;
+            MainMenuUIBuilder.Stretch(pbTxtGo.GetComponent<RectTransform>());
+
+            GameObject vpBezel = MainMenuUIBuilder.NewUI("ViewportBezel", stageCard.transform);
+            Image bezelImg = vpBezel.AddComponent<Image>();
+            LabStyleUI.ApplySlicedSprite(bezelImg, LabStyleUI.GetRecessedSlotSprite(), false);
+            RectTransform bzRt = vpBezel.GetComponent<RectTransform>();
+            bzRt.sizeDelta = new Vector2(804f, 466f);
+            bzRt.anchoredPosition = new Vector2(0f, 60f);
+
+            GameObject viewport = MainMenuUIBuilder.NewUI("DemoViewport", stageCard.transform);
+            Image vpBg = viewport.AddComponent<Image>();
+            vpBg.color = new Color(0.055f, 0.085f, 0.135f, 0.96f);
+            RectTransform vpRt = viewport.GetComponent<RectTransform>();
+            vpRt.sizeDelta = new Vector2(MainMenuUI.DemoViewportWidthPx, MainMenuUI.DemoViewportHeightPx);
+            vpRt.anchoredPosition = new Vector2(0f, 60f);
+            viewport.AddComponent<RectMask2D>();
+
+            for (int gx = -480; gx <= 480; gx += 120)
+            {
+                GameObject vLine = MainMenuUIBuilder.NewUI("GridV_" + gx, viewport.transform);
+                Image vlImg = vLine.AddComponent<Image>();
+                vlImg.color = new Color(0.55f, 0.75f, 0.95f, 0.06f);
+                vlImg.raycastTarget = false;
+                RectTransform vlRt = vLine.GetComponent<RectTransform>();
+                vlRt.sizeDelta = new Vector2(1f, MainMenuUI.DemoViewportHeightPx);
+                vlRt.anchoredPosition = new Vector2(gx, 0f);
+                demoGridVLines.Add(vlRt);
+                demoGridVBaseX.Add(gx);
+            }
+            for (int gy = -240; gy <= 240; gy += 80)
+            {
+                GameObject hLine = MainMenuUIBuilder.NewUI("GridH_" + gy, viewport.transform);
+                Image hlImg = hLine.AddComponent<Image>();
+                hlImg.color = new Color(0.55f, 0.75f, 0.95f, 0.06f);
+                hlImg.raycastTarget = false;
+                RectTransform hlRt = hLine.GetComponent<RectTransform>();
+                hlRt.sizeDelta = new Vector2(MainMenuUI.DemoViewportWidthPx, 1f);
+                hlRt.anchoredPosition = new Vector2(0f, gy);
+                demoGridHLines.Add(hlRt);
+                demoGridHBaseY.Add(gy);
+            }
+
+            BuildDemoPlatformsFromLevelData(viewport.transform, demoLevelData);
+            BuildDemoCollectibleFromLevelData(viewport.transform, demoLevelData);
+            BuildDemoNewtonApparatusFromLevelData(viewport.transform, demoLevelData);
+            BuildDemoCharacter(viewport.transform);
+
+            GameObject botPill = MainMenuUIBuilder.NewUI("DemoBotInputBadge", viewport.transform);
+            Image botPillBg = botPill.AddComponent<Image>();
+            LabStyleUI.ApplySlicedSprite(botPillBg, LabStyleUI.GetRecessedSlotSprite(), false);
+            botPillBg.color = new Color(0.08f, 0.14f, 0.22f, 0.88f);
+            botPillBg.raycastTarget = false;
+            RectTransform bpRt = botPill.GetComponent<RectTransform>();
+            bpRt.anchorMin = new Vector2(0f, 1f);
+            bpRt.anchorMax = new Vector2(0f, 1f);
+            bpRt.pivot = new Vector2(0f, 1f);
+            bpRt.anchoredPosition = new Vector2(14f, -12f);
+            bpRt.sizeDelta = new Vector2(310f, 28f);
+
+            GameObject bpTxtGo = MainMenuUIBuilder.NewUI("BotInputText", botPill.transform);
+            demoBotInputBadgeText = bpTxtGo.AddComponent<Text>();
+            demoBotInputBadgeText.font = MainMenuUIBuilder.GetFont();
+            demoBotInputBadgeText.text = "MÁY TỰ CHƠI  ·  INPUT: [D] DI CHUYỂN";
+            demoBotInputBadgeText.fontSize = 11;
+            demoBotInputBadgeText.fontStyle = FontStyle.Bold;
+            demoBotInputBadgeText.alignment = TextAnchor.MiddleCenter;
+            demoBotInputBadgeText.color = new Color(0.68f, 0.92f, 1f, 0.96f);
+            MainMenuUIBuilder.Stretch(bpTxtGo.GetComponent<RectTransform>());
+
+            BuildDemoCircularIrisOverlay(viewport.transform);
+
+            GameObject ruleBox = MainMenuUIBuilder.NewUI("LiveRuleBox", stageCard.transform);
+            Image ruleBg = ruleBox.AddComponent<Image>();
+            LabStyleUI.ApplySlicedSprite(ruleBg, LabStyleUI.GetPillSprite(), true, -4f);
+            RectTransform ruleRt = ruleBox.GetComponent<RectTransform>();
+            ruleRt.sizeDelta = new Vector2(796f, 52f);
+            ruleRt.anchoredPosition = new Vector2(0f, -210f);
+
+            GameObject ruleTxtGo = MainMenuUIBuilder.NewUI("RuleText", ruleBox.transform);
+            demoRuleCaptionText = ruleTxtGo.AddComponent<Text>();
+            demoRuleCaptionText.font = MainMenuUIBuilder.GetFont();
+            demoRuleCaptionText.text = "Cùng màu → đi xuyên qua vật cản   ·   Khác màu → đứng vững trên bệ đỡ";
+            demoRuleCaptionText.fontSize = 14;
+            demoRuleCaptionText.fontStyle = FontStyle.Bold;
+            demoRuleCaptionText.alignment = TextAnchor.MiddleCenter;
+            demoRuleCaptionText.color = LabStyleUI.TextPrimary;
+            MainMenuUIBuilder.Stretch(ruleTxtGo.GetComponent<RectTransform>());
+
+            BuildDemoPhaseBar(stageCard.transform);
+
+            ResetDemoMiniGame();
+        }
+
+        public void ResetDemoMiniGame()
+        {
+            Simulation.ResetFull(out bool resetVisuals);
+            if (resetVisuals)
+                ResetVisualMarkers();
+            ApplyDemoCameraToWorldTransforms(TotalTime);
+        }
+
+        private void ResetVisualMarkers()
+        {
+            for (int i = 0; i < 3; i++)
+            {
+                if (demoNewtonPointRts[i] != null)
+                    demoNewtonPointRts[i].gameObject.SetActive(false);
+            }
+            if (demoConnectLineBRt != null)
+                demoConnectLineBRt.sizeDelta = new Vector2(0f, 4.5f);
+            if (demoConnectLineSmallBRt != null)
+                demoConnectLineSmallBRt.sizeDelta = new Vector2(0f, 4.5f);
+            if (demoNewtonFormulaBadgeGo != null)
+                demoNewtonFormulaBadgeGo.SetActive(false);
+            if (demoReachPointerImg != null)
+                demoReachPointerImg.color = new Color(0.35f, 0.96f, 1f, 0f);
+            if (demoRunnerRoot != null)
+            {
+                demoRunnerRoot.localScale = Vector3.one;
+                demoRunnerRoot.localRotation = Quaternion.identity;
+            }
+        }
+
+        public void UpdateShowcase(float time, float dt)
+        {
+            TotalTime = time;
+            float safeDt = Mathf.Clamp(dt, 0.001f, 0.05f);
+
+            // 1. Pulse 5 Concentric Newton Rings (highlighting pair i = 2, k = 4, outer diameter 164 px)
+            Color c550 = NewtonRingsPresentation.WavelengthToRgb(550f);
+            float[] baseDiameters = { 164f, 136f, 108f, 78f, 46f };
+            for (int r = 0; r < demoNewtonRingImgs.Count && r < 5; r++)
+            {
+                if (demoNewtonRingImgs[r] == null) continue;
+                int ringOrder = 5 - r;
+                bool isPairIK = (ringOrder == 2 || ringOrder == 4);
+                float pulse = 1f + (isPairIK ? 0.045f : 0.025f) * Mathf.Sin(time * 3.0f - r * 0.6f);
+                float sz = baseDiameters[r] * pulse;
+                demoNewtonRingRts[r].sizeDelta = new Vector2(sz, sz);
+
+                if (isPairIK)
+                {
+                    Color hiCol = ringOrder == 4
+                        ? Color.Lerp(c550, new Color(0.35f, 0.96f, 1f, 1f), 0.45f)
+                        : Color.Lerp(c550, new Color(1f, 0.90f, 0.35f, 1f), 0.45f);
+                    hiCol.a = 0.94f;
+                    demoNewtonRingImgs[r].color = hiCol;
+                }
+                else
+                {
+                    demoNewtonRingImgs[r].color = new Color(c550.r, c550.g, c550.b, 0.44f);
+                }
+            }
+
+            if (demoRunnerRoot == null)
+                return;
+
+            // 2. Step Mini-Game Bot & Physics Simulation with deterministic sub-stepping
+            Simulation.StepSimulation(
+                safeDt,
+                out MainMenuUI.DemoBotInput lastBotInput,
+                out string ruleText,
+                out bool didResetVisualMarkers);
+
+            if (didResetVisualMarkers)
+                ResetVisualMarkers();
+
+            if (demoBotInputBadgeText != null && !string.IsNullOrEmpty(lastBotInput.KeyBadgeText))
+                demoBotInputBadgeText.text = lastBotInput.KeyBadgeText;
+
+            ApplyDemoCameraToWorldTransforms(time);
+
+            // 3. Compute Character Viewport Position, Rotation & Scale (including Vortex Suck-In at Stage 8)
+            Vector2 feetPosPx = new Vector2(
+                Simulation.PlayerWorldPos.x * MainMenuUI.DemoPixelsPerUnit,
+                (Simulation.PlayerWorldPos.y - Simulation.PlayerSize.y * 0.5f) * MainMenuUI.DemoPixelsPerUnit);
+
+            if (Simulation.BotStage == MainMenuUI.DemoBotStage.SuckedIntoNewtonCenter)
+            {
+                float u = Mathf.Clamp01(Simulation.StageTimer / 0.90f);
+                float ease = u * u * (3f - 2f * u);
+                Vector2 targetCenterBottom = Simulation.NewtonCenterPx - new Vector2(0f, 18f * (1f - ease));
+                Vector2 worldCharPx = Vector2.Lerp(Simulation.SuckStartPosPx, targetCenterBottom, ease);
+                worldCharPx.y += Mathf.Sin(u * Mathf.PI) * 38f;
+                demoRunnerRoot.anchoredPosition = worldCharPx - Simulation.CameraPosPx;
+                demoRunnerRoot.localRotation = Quaternion.Euler(0f, 0f, -u * 540f);
+                float sc = Mathf.Lerp(1f, 0.04f, ease);
+                demoRunnerRoot.localScale = new Vector3(sc, sc, 1f);
+            }
+            else if (Simulation.BotStage == MainMenuUI.DemoBotStage.CircularIrisCloseAndReset && !Simulation.ResetDoneInIris)
+            {
+                demoRunnerRoot.anchoredPosition = Simulation.NewtonCenterPx - Simulation.CameraPosPx;
+                demoRunnerRoot.localScale = Vector3.zero;
+            }
+            else
+            {
+                demoRunnerRoot.anchoredPosition = feetPosPx - Simulation.CameraPosPx;
+                demoRunnerRoot.localRotation = Quaternion.identity;
+                demoRunnerRoot.localScale = Vector3.one;
+            }
+
+            int colorIdx = Simulation.PlayerColor == LogicalColor.White
+                ? 0
+                : (Simulation.PlayerColor == LogicalColor.Gray ? 1 : 2);
+
+            if (colorIdx != lastDemoColorIndex)
+            {
+                lastDemoColorIndex = colorIdx;
+                shiftPulseTimer = 0f;
+            }
+            shiftPulseTimer += safeDt;
+            if (demoShiftPulseRt != null && demoShiftPulseImg != null)
+            {
+                if (shiftPulseTimer < 0.55f)
+                {
+                    float p = shiftPulseTimer / 0.55f;
+                    float sz = Mathf.Lerp(54f, 220f, p);
+                    demoShiftPulseRt.sizeDelta = new Vector2(sz, sz);
+                    demoShiftPulseImg.color = new Color(0.42f, 0.92f, 1f, (1f - p) * 0.85f);
+                }
+                else
+                {
+                    demoShiftPulseImg.color = new Color(0.42f, 0.92f, 1f, 0f);
+                }
+            }
+
+            // 4. Sample Authoritative SilhouetteMotion Character Sprites (including 2-armed "AnMung" / "Celebrate")
+            bool isMovingHoriz = Mathf.Abs(lastBotInput.MoveAxisX) > 0.05f &&
+                                 Simulation.BotStage <= MainMenuUI.DemoBotStage.ShiftBlackJumpToNewtonStage;
+            bool isReachingPoints = Simulation.BotStage == MainMenuUI.DemoBotStage.ReachAndPickThreeHorizontalPoints;
+            bool isCelebrating = Simulation.BotStage == MainMenuUI.DemoBotStage.CelebrateCompletion;
+
+            string clipMode;
+            if (isCelebrating || isReachingPoints)
+            {
+                clipMode = "AnMung";
+                demoAnimClock += safeDt * (isCelebrating ? 1.45f : 1.0f);
+            }
+            else if (!Simulation.PlayerGrounded)
+            {
+                clipMode = "Jump";
+                demoAnimClock = 0.28f;
+            }
+            else if (isMovingHoriz)
+            {
+                clipMode = "Run";
+                demoAnimClock += safeDt;
+            }
+            else
+            {
+                clipMode = "Idle";
+                demoAnimClock += safeDt;
+            }
+
+            Sprite bodySprite = PlayerVisualPresentation.SampleBodySprite(clipMode, demoAnimClock, out int frameIdx);
+            Sprite rimSprite = PlayerVisualPresentation.SampleRimSprite(clipMode, frameIdx);
+            bool hasRealSprites = bodySprite != null;
+
+            Color bodyCol = colorIdx == 0
+                ? PlayerVisualPresentation.BrightBody
+                : (colorIdx == 1 ? PlayerVisualPresentation.GrayBody : PlayerVisualPresentation.DarkBody);
+            Color rimCol = colorIdx == 0
+                ? PlayerVisualPresentation.BrightRim
+                : (colorIdx == 1 ? PlayerVisualPresentation.GrayRim : PlayerVisualPresentation.DarkStrokeRim);
+            Color haloCol = colorIdx == 0
+                ? PlayerVisualPresentation.BrightHalo
+                : (colorIdx == 1
+                    ? new Color(0.55f, 0.62f, 0.70f, 0.16f)
+                    : new Color(0.45f, 0.75f, 0.95f, 0.22f));
+
+            if (isCelebrating)
+            {
+                haloCol = new Color(1f, 0.90f, 0.38f, 0.42f + 0.18f * Mathf.Sin(time * 10f));
+            }
+
+            if (demoCharacterHaloImg != null)
+                demoCharacterHaloImg.color = haloCol;
+
+            if (demoCharacterBodyImg != null && demoCharacterRimImg != null)
+            {
+                demoCharacterBodyImg.gameObject.SetActive(hasRealSprites);
+                demoCharacterRimImg.gameObject.SetActive(hasRealSprites);
+                if (hasRealSprites)
+                {
+                    demoCharacterBodyImg.sprite = bodySprite;
+                    demoCharacterBodyImg.color = bodyCol;
+                    demoCharacterRimImg.sprite = rimSprite != null ? rimSprite : bodySprite;
+                    demoCharacterRimImg.color = rimCol;
+                }
+            }
+
+            // Toggle procedural fallback parts only if real sprite sheets aren't loaded
+            if (demoHeadImg != null) demoHeadImg.gameObject.SetActive(!hasRealSprites);
+            if (demoTorsoImg != null) demoTorsoImg.gameObject.SetActive(!hasRealSprites);
+            if (demoLegLeftImg != null) demoLegLeftImg.gameObject.SetActive(!hasRealSprites);
+            if (demoLegRightImg != null) demoLegRightImg.gameObject.SetActive(!hasRealSprites);
+            if (!hasRealSprites)
+            {
+                if (demoHeadImg != null) demoHeadImg.color = bodyCol;
+                if (demoTorsoImg != null) demoTorsoImg.color = bodyCol;
+                if (demoLegLeftImg != null) demoLegLeftImg.color = bodyCol;
+                if (demoLegRightImg != null) demoLegRightImg.color = bodyCol;
+                float swing = !Simulation.PlayerGrounded ? 24f : (isMovingHoriz ? Mathf.Sin(time * 13f) * 28f : 0f);
+                if (demoLegLeft != null) demoLegLeft.localRotation = Quaternion.Euler(0f, 0f, swing);
+                if (demoLegRight != null) demoLegRight.localRotation = Quaternion.Euler(0f, 0f, -swing);
+            }
+
+            // 5. Update 3 Horizontal Points (K, I, K') & Connecting Line Animation (B = KI, b = IK')
+            Vector2[] ptOffsets =
+            {
+                new Vector2(-68f, 0f),
+                new Vector2(-39f, 0f),
+                new Vector2(68f, 0f)
+            };
+
+            for (int i = 0; i < 3; i++)
+            {
+                if (demoNewtonPointRts[i] == null || demoNewtonPointImgs[i] == null)
+                    continue;
+                bool active = i < Simulation.NewtonMarksCount;
+                demoNewtonPointRts[i].gameObject.SetActive(active);
+                if (active)
+                {
+                    float pop = 14f + 2.5f * Mathf.Sin(time * 6f + i);
+                    demoNewtonPointRts[i].sizeDelta = new Vector2(pop, pop);
+                    Color c = demoNewtonPointImgs[i].color;
+                    c.a = 0.98f;
+                    demoNewtonPointImgs[i].color = c;
+                }
+            }
+
+            if (demoReachPointerRt != null && demoReachPointerImg != null)
+            {
+                if (isReachingPoints)
+                {
+                    int targetIdx = Mathf.Clamp(Simulation.NewtonMarksCount, 0, 2);
+                    Vector2 targetPx = Simulation.NewtonCenterPx + ptOffsets[targetIdx];
+                    Vector2 handOriginPx = feetPosPx + new Vector2(44f, 108f);
+                    float uReach = Mathf.PingPong(Simulation.StageTimer * 3.2f, 1f);
+                    demoReachPointerRt.anchoredPosition = Vector2.Lerp(handOriginPx, targetPx, uReach) - Simulation.CameraPosPx;
+                    demoReachPointerImg.color = new Color(0.38f, 0.96f, 1f, 0.88f);
+                }
+                else
+                {
+                    demoReachPointerImg.color = new Color(0.38f, 0.96f, 1f, 0f);
+                }
+            }
+
+            if (demoConnectLineBRt != null && demoConnectLineSmallBRt != null)
+            {
+                float bProg = Mathf.Clamp01(Simulation.ConnectProgress * 2f);
+                float smallBProg = Mathf.Clamp01((Simulation.ConnectProgress - 0.5f) * 2f);
+                demoConnectLineBRt.sizeDelta = new Vector2(29f * bProg, 4.5f);
+                demoConnectLineSmallBRt.sizeDelta = new Vector2(107f * smallBProg, 4.5f);
+            }
+
+            if (demoNewtonFormulaBadgeGo != null)
+            {
+                demoNewtonFormulaBadgeGo.SetActive(
+                    Simulation.BotStage == MainMenuUI.DemoBotStage.AnimateConnectingLines ||
+                    Simulation.BotStage == MainMenuUI.DemoBotStage.CelebrateCompletion ||
+                    Simulation.BotStage == MainMenuUI.DemoBotStage.SuckedIntoNewtonCenter);
+            }
+
+            // 6. Update Circular Iris-In Overlay ("thu nhỏ tròn từ ngoài vào")
+            UpdateDemoCircularIrisVisual();
+
+            // 7. Highlight pass-through translucency when platform matches character phase
+            if (demoWhiteGateImg != null)
+                demoWhiteGateImg.color = new Color(0.95f, 0.98f, 1f, colorIdx == 0 ? 0.30f : 0.96f);
+            if (demoWhiteStepImg != null)
+                demoWhiteStepImg.color = new Color(0.95f, 0.98f, 1f, colorIdx == 0 ? 0.30f : 0.96f);
+            if (demoGrayBridgeImg != null)
+                demoGrayBridgeImg.color = new Color(0.53f, 0.57f, 0.62f, colorIdx == 1 ? 0.28f : 0.96f);
+
+            // 8. Animate Quang Điểm collectible
+            if (demoQuangDiemRt != null && demoQuangDiemImg != null)
+            {
+                if (Simulation.QuangDiemCollected)
+                {
+                    demoQuangDiemImg.color = new Color(1f, 0.90f, 0.40f, 0f);
+                }
+                else
+                {
+                    float qPulse = 28f + Mathf.Sin(time * 5f) * 5f;
+                    demoQuangDiemRt.sizeDelta = new Vector2(qPulse, qPulse);
+                    demoQuangDiemImg.color = new Color(1f, 0.90f, 0.38f, 0.96f);
+                }
+            }
+
+            // 9. Update Live Phase Badge & Synchronized Mini Phase Bar Thumb
+            float targetThumbX = colorIdx == 0 ? -240f : (colorIdx == 1 ? -74f : 92f);
+            if (demoPhaseThumbRt != null)
+            {
+                Vector2 cur = demoPhaseThumbRt.anchoredPosition;
+                demoPhaseThumbRt.anchoredPosition = new Vector2(Mathf.Lerp(cur.x, targetThumbX, Mathf.Clamp01(safeDt * 14f)), 14f);
+            }
+
+            if (demoPhaseBadgeBg != null && demoPhaseBadgeText != null)
+            {
+                demoPhaseBadgeBg.sprite = colorIdx == 0
+                    ? LabStyleUI.GetPrimaryButtonSprite()
+                    : LabStyleUI.GetPillSprite();
+                demoPhaseBadgeBg.color = Color.white;
+                demoPhaseBadgeText.text = colorIdx == 0
+                    ? "Pha hiện tại: Trắng"
+                    : (colorIdx == 1 ? "Pha hiện tại: Xám" : "Pha hiện tại: Đen");
+                demoPhaseBadgeText.color = LabStyleUI.TextPrimary;
+            }
+
+            if (demoRuleCaptionText != null)
+                demoRuleCaptionText.text = ruleText;
+        }
+
+        private void ApplyDemoCameraToWorldTransforms(float time)
+        {
+            Vector2 camPx = Simulation.CameraPosPx;
+
+            float modX = ((camPx.x % 120f) + 120f) % 120f;
+            for (int g = 0; g < demoGridVLines.Count; g++)
+            {
+                if (demoGridVLines[g] != null)
+                    demoGridVLines[g].anchoredPosition = new Vector2(demoGridVBaseX[g] - modX, 0f);
+            }
+
+            float modY = ((camPx.y % 80f) + 80f) % 80f;
+            for (int g = 0; g < demoGridHLines.Count; g++)
+            {
+                if (demoGridHLines[g] != null)
+                    demoGridHLines[g].anchoredPosition = new Vector2(0f, demoGridHBaseY[g] - modY);
+            }
+
+            for (int i = 0; i < Simulation.Platforms.Count; i++)
+            {
+                DemoPlatformActor plat = Simulation.Platforms[i];
+                if (plat.Rect != null)
+                    plat.Rect.anchoredPosition = plat.WorldPos * MainMenuUI.DemoPixelsPerUnit - camPx;
+            }
+
+            if (demoWhiteGateTagRt != null)
+                demoWhiteGateTagRt.anchoredPosition = demoWhiteGateTagWorldPx - camPx;
+
+            if (demoNewtonRootRt != null)
+                demoNewtonRootRt.anchoredPosition = Simulation.NewtonCenterPx - camPx;
+
+            if (demoQuangDiemRt != null)
+            {
+                Vector2 baseQdPx = new Vector2(-40f, -632f);
+                LevelData data = Simulation.LevelData;
+                if (data != null && data.collectibles != null && data.collectibles.Length > 0 && data.collectibles[0].position != null)
+                {
+                    baseQdPx = data.collectibles[0].position.ToVector2() * MainMenuUI.DemoPixelsPerUnit;
+                }
+                demoQuangDiemRt.anchoredPosition = new Vector2(baseQdPx.x, baseQdPx.y + Mathf.Sin(time * 3.5f) * 5f) - camPx;
+            }
+
+            if (demoRunnerRoot != null)
+            {
+                Vector2 feetPosPx = new Vector2(
+                    Simulation.PlayerWorldPos.x * MainMenuUI.DemoPixelsPerUnit,
+                    (Simulation.PlayerWorldPos.y - Simulation.PlayerSize.y * 0.5f) * MainMenuUI.DemoPixelsPerUnit);
+                demoRunnerRoot.anchoredPosition = feetPosPx - camPx;
+            }
+        }
+
+        private void BuildDemoPlatformsFromLevelData(Transform viewportTransform, LevelData data)
+        {
+            if (data == null || data.platforms == null)
+                return;
+
+            for (int i = 0; i < data.platforms.Length; i++)
+            {
+                ColorPlatformData p = data.platforms[i];
+                if (p == null || p.position == null || p.size == null)
+                    continue;
+
+                Vector2 worldPos = p.position.ToVector2();
+                Vector2 worldSize = p.size.ToVector2();
+                Vector2 uiPos = worldPos * MainMenuUI.DemoPixelsPerUnit;
+                Vector2 uiSize = worldSize * MainMenuUI.DemoPixelsPerUnit;
+
+                LogicalColor logical = ColorClassifier.Classify(p.rawGrayscaleColor);
+                bool isUniversal = p.rawGrayscaleColor >= 250f || logical == LogicalColor.Universal;
+                Color baseVisual = ColorClassifier.GetPlatformVisualColor(p.rawGrayscaleColor);
+
+                Color fillCol;
+                Color borderCol;
+                string objName;
+                string labelStr = null;
+
+                if (isUniversal)
+                {
+                    fillCol = new Color(baseVisual.r, baseVisual.g, baseVisual.b, 1f);
+                    borderCol = new Color(1.00f, 0.92f, 0.45f, 0.88f);
+                    objName = "FloorUniversal";
+                    labelStr = "Nền cố định (mọi pha màu đều đứng được)";
+                }
+                else if (logical == LogicalColor.White)
+                {
+                    fillCol = new Color(0.95f, 0.98f, 1f, 0.96f);
+                    borderCol = new Color(0.75f, 0.90f, 1f, 0.85f);
+                    bool isWall = worldSize.y > worldSize.x;
+                    objName = isWall ? "WhitePhaseGate" : "WhitePortalStep";
+                    labelStr = isWall ? null : "Bệ Trắng";
+                }
+                else if (logical == LogicalColor.Gray)
+                {
+                    fillCol = new Color(0.55f, 0.60f, 0.66f, 0.96f);
+                    borderCol = new Color(0.80f, 0.86f, 0.92f, 0.65f);
+                    objName = "GrayPhaseBridge";
+                    labelStr = "Bệ Xám";
+                }
+                else
+                {
+                    fillCol = new Color(0.08f, 0.10f, 0.15f, 0.98f);
+                    borderCol = new Color(0.58f, 0.72f, 0.88f, 0.55f);
+                    objName = "BlackPedestal";
+                    labelStr = "Bệ Đen";
+                }
+
+                Image img = CreateDemoPlatform(viewportTransform, objName, uiPos, uiSize, fillCol, borderCol, labelStr);
+
+                if (objName == "WhitePhaseGate")
+                {
+                    demoWhiteGateImg = img;
+                    demoWhiteGateTagWorldPx = new Vector2(uiPos.x, uiPos.y + uiSize.y * 0.5f + 16f);
+                    MainMenuUIBuilder.CreateSubLabel(
+                        viewportTransform,
+                        "WhiteGateTag",
+                        "Tường Trắng",
+                        demoWhiteGateTagWorldPx,
+                        new Vector2(130f, 22f),
+                        12,
+                        FontStyle.Bold,
+                        LabStyleUI.TextPrimary,
+                        TextAnchor.MiddleCenter);
+                    Transform tagTr = viewportTransform.Find("WhiteGateTag");
+                    if (tagTr != null)
+                        demoWhiteGateTagRt = tagTr.GetComponent<RectTransform>();
+                }
+                else if (objName == "GrayPhaseBridge")
+                {
+                    demoGrayBridgeImg = img;
+                }
+                else if (objName == "WhitePortalStep")
+                {
+                    demoWhiteStepImg = img;
+                }
+
+                Simulation.Platforms.Add(new DemoPlatformActor
+                {
+                    Rect = img.GetComponent<RectTransform>(),
+                    Image = img,
+                    WorldPos = worldPos,
+                    WorldSize = worldSize,
+                    RawGrayscale = p.rawGrayscaleColor,
+                    Logical = logical,
+                    IsUniversal = isUniversal
+                });
+            }
+        }
+
+        private static Image CreateDemoPlatform(
+            Transform parent,
+            string name,
+            Vector2 pos,
+            Vector2 size,
+            Color fillCol,
+            Color borderCol,
+            string labelStr)
+        {
+            GameObject go = MainMenuUIBuilder.NewUI(name, parent);
+            Image img = go.AddComponent<Image>();
+            img.color = fillCol;
+            img.raycastTarget = false;
+
+            Outline outl = go.AddComponent<Outline>();
+            outl.effectColor = borderCol;
+            outl.effectDistance = new Vector2(1.5f, -1.5f);
+
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
+
+            if (!string.IsNullOrEmpty(labelStr))
+            {
+                bool isLight = (fillCol.r + fillCol.g + fillCol.b) > 1.8f;
+                MainMenuUIBuilder.CreateSubLabel(
+                    go.transform,
+                    "Tag",
+                    labelStr,
+                    Vector2.zero,
+                    size,
+                    12,
+                    FontStyle.Bold,
+                    isLight ? new Color(0.08f, 0.12f, 0.18f, 0.92f) : new Color(0.90f, 0.95f, 1f, 0.90f),
+                    TextAnchor.MiddleCenter);
+            }
+
+            return img;
+        }
+
+        private void BuildDemoCollectibleFromLevelData(Transform viewportTransform, LevelData data)
+        {
+            Sprite circleSprite = MainMenuUIBuilder.GetCircleSprite();
+            Vector2 qdUiPos = new Vector2(-40f, -632f);
+            if (data != null && data.collectibles != null && data.collectibles.Length > 0 && data.collectibles[0].position != null)
+            {
+                qdUiPos = data.collectibles[0].position.ToVector2() * MainMenuUI.DemoPixelsPerUnit;
+            }
+
+            GameObject qdGo = MainMenuUIBuilder.NewUI("DemoQuangDiem", viewportTransform);
+            demoQuangDiemImg = qdGo.AddComponent<Image>();
+            demoQuangDiemImg.sprite = circleSprite;
+            demoQuangDiemImg.color = new Color(1f, 0.88f, 0.36f, 0.95f);
+            demoQuangDiemImg.raycastTarget = false;
+            demoQuangDiemRt = qdGo.GetComponent<RectTransform>();
+            demoQuangDiemRt.anchoredPosition = qdUiPos;
+            demoQuangDiemRt.sizeDelta = new Vector2(28f, 28f);
+        }
+
+        private void BuildDemoNewtonApparatusFromLevelData(Transform viewportTransform, LevelData data)
+        {
+            Sprite circle = MainMenuUIBuilder.GetCircleSprite();
+            Sprite ring = MainMenuUIBuilder.GetRingSprite();
+
+            GameObject newtonRoot = MainMenuUIBuilder.NewUI("DemoNewtonApparatus", viewportTransform);
+            demoNewtonRootRt = newtonRoot.GetComponent<RectTransform>();
+            demoNewtonRootRt.anchoredPosition = Simulation.NewtonCenterPx;
+            demoNewtonRootRt.sizeDelta = new Vector2(174f, 174f);
+
+            GameObject backGlow = MainMenuUIBuilder.NewUI("NewtonBackGlow", newtonRoot.transform);
+            Image bgImg = backGlow.AddComponent<Image>();
+            bgImg.sprite = circle;
+            bgImg.color = new Color(0.18f, 0.72f, 0.56f, 0.24f);
+            bgImg.raycastTarget = false;
+            RectTransform bgRt = backGlow.GetComponent<RectTransform>();
+            bgRt.anchoredPosition = Vector2.zero;
+            bgRt.sizeDelta = new Vector2(188f, 188f);
+
+            float[] ringDiameters = { 164f, 136f, 108f, 78f, 46f };
+            for (int r = 0; r < 5; r++)
+            {
+                int ringOrder = 5 - r;
+                GameObject ringGo = MainMenuUIBuilder.NewUI("DemoNewtonRing_" + ringOrder, newtonRoot.transform);
+                Image rImg = ringGo.AddComponent<Image>();
+                rImg.sprite = ring;
+                bool isTargetOrder = (ringOrder == 2 || ringOrder == 4);
+                rImg.color = isTargetOrder
+                    ? new Color(0.35f, 0.96f, 0.68f, 0.94f)
+                    : new Color(0.24f, 0.78f, 0.54f, 0.50f);
+                rImg.raycastTarget = false;
+
+                RectTransform rRt = ringGo.GetComponent<RectTransform>();
+                rRt.anchoredPosition = Vector2.zero;
+                rRt.sizeDelta = new Vector2(ringDiameters[r], ringDiameters[r]);
+
+                demoNewtonRingImgs.Add(rImg);
+                demoNewtonRingRts.Add(rRt);
+            }
+
+            GameObject centerDot = MainMenuUIBuilder.NewUI("NewtonCenterO", newtonRoot.transform);
+            Image cImg = centerDot.AddComponent<Image>();
+            cImg.sprite = circle;
+            cImg.color = new Color(0.85f, 0.98f, 1f, 0.92f);
+            cImg.raycastTarget = false;
+            RectTransform cRt = centerDot.GetComponent<RectTransform>();
+            cRt.anchoredPosition = Vector2.zero;
+            cRt.sizeDelta = new Vector2(8f, 8f);
+
+            GameObject lineBGo = MainMenuUIBuilder.NewUI("ConnectLine_B_KI", newtonRoot.transform);
+            demoConnectLineBImg = lineBGo.AddComponent<Image>();
+            demoConnectLineBImg.color = new Color(0.25f, 0.95f, 1f, 0.96f);
+            demoConnectLineBImg.raycastTarget = false;
+            demoConnectLineBRt = lineBGo.GetComponent<RectTransform>();
+            demoConnectLineBRt.pivot = new Vector2(0f, 0.5f);
+            demoConnectLineBRt.anchoredPosition = new Vector2(-68f, 0f);
+            demoConnectLineBRt.sizeDelta = new Vector2(0f, 4.5f);
+
+            GameObject lineSmallBGo = MainMenuUIBuilder.NewUI("ConnectLine_b_IKp", newtonRoot.transform);
+            demoConnectLineSmallBImg = lineSmallBGo.AddComponent<Image>();
+            demoConnectLineSmallBImg.color = new Color(1f, 0.88f, 0.32f, 0.96f);
+            demoConnectLineSmallBImg.raycastTarget = false;
+            demoConnectLineSmallBRt = lineSmallBGo.GetComponent<RectTransform>();
+            demoConnectLineSmallBRt.pivot = new Vector2(0f, 0.5f);
+            demoConnectLineSmallBRt.anchoredPosition = new Vector2(-39f, 0f);
+            demoConnectLineSmallBRt.sizeDelta = new Vector2(0f, 4.5f);
+
+            Vector2[] pointOffsets =
+            {
+                new Vector2(-68f, 0f),
+                new Vector2(-39f, 0f),
+                new Vector2(68f, 0f)
+            };
+            string[] pointLabels = { "K", "I", "K'" };
+            Color[] pointColors =
+            {
+                new Color(0.28f, 0.96f, 1f, 1f),
+                new Color(1f, 0.88f, 0.32f, 1f),
+                new Color(0.28f, 0.96f, 1f, 1f)
+            };
+
+            for (int p = 0; p < 3; p++)
+            {
+                GameObject ptGo = MainMenuUIBuilder.NewUI("NewtonPoint_" + pointLabels[p], newtonRoot.transform);
+                Image ptImg = ptGo.AddComponent<Image>();
+                ptImg.sprite = circle;
+                ptImg.color = new Color(pointColors[p].r, pointColors[p].g, pointColors[p].b, 0f);
+                ptImg.raycastTarget = false;
+
+                RectTransform ptRt = ptGo.GetComponent<RectTransform>();
+                ptRt.anchoredPosition = pointOffsets[p];
+                ptRt.sizeDelta = new Vector2(14f, 14f);
+
+                MainMenuUIBuilder.CreateSubLabel(
+                    ptGo.transform,
+                    "PtTag",
+                    pointLabels[p],
+                    new Vector2(0f, 15f),
+                    new Vector2(28f, 16f),
+                    11,
+                    FontStyle.Bold,
+                    pointColors[p],
+                    TextAnchor.MiddleCenter);
+
+                demoNewtonPointRts[p] = ptRt;
+                demoNewtonPointImgs[p] = ptImg;
+                ptGo.SetActive(false);
+            }
+
+            demoNewtonFormulaBadgeGo = MainMenuUIBuilder.NewUI("NewtonFormulaBadge", newtonRoot.transform);
+            Image fBg = demoNewtonFormulaBadgeGo.AddComponent<Image>();
+            LabStyleUI.ApplySlicedSprite(fBg, LabStyleUI.GetRecessedSlotSprite(), false);
+            fBg.color = new Color(0.06f, 0.14f, 0.22f, 0.94f);
+            fBg.raycastTarget = false;
+            RectTransform fRt = demoNewtonFormulaBadgeGo.GetComponent<RectTransform>();
+            fRt.anchoredPosition = new Vector2(0f, 102f);
+            fRt.sizeDelta = new Vector2(210f, 26f);
+
+            GameObject fTxtGo = MainMenuUIBuilder.NewUI("FormulaText", demoNewtonFormulaBadgeGo.transform);
+            demoNewtonFormulaText = fTxtGo.AddComponent<Text>();
+            demoNewtonFormulaText.font = MainMenuUIBuilder.GetFont();
+            demoNewtonFormulaText.text = "i = 2, k = 4  ·  Nối B = KI, b = IK'";
+            demoNewtonFormulaText.fontSize = 11;
+            demoNewtonFormulaText.fontStyle = FontStyle.Bold;
+            demoNewtonFormulaText.alignment = TextAnchor.MiddleCenter;
+            demoNewtonFormulaText.color = new Color(0.45f, 0.98f, 0.78f, 1f);
+            MainMenuUIBuilder.Stretch(fTxtGo.GetComponent<RectTransform>());
+            demoNewtonFormulaBadgeGo.SetActive(false);
+
+            MainMenuUIBuilder.CreateSubLabel(
+                newtonRoot.transform,
+                "NewtonTitleTag",
+                "Vân Newton (5 vòng · i=2, k=4)",
+                new Vector2(0f, -96f),
+                new Vector2(190f, 20f),
+                11,
+                FontStyle.Bold,
+                new Color(0.68f, 0.94f, 0.84f, 0.90f),
+                TextAnchor.MiddleCenter);
+
+            GameObject ptrGo = MainMenuUIBuilder.NewUI("DemoReachPointer", viewportTransform);
+            demoReachPointerImg = ptrGo.AddComponent<Image>();
+            demoReachPointerImg.sprite = ring;
+            demoReachPointerImg.color = new Color(0.35f, 0.96f, 1f, 0f);
+            demoReachPointerImg.raycastTarget = false;
+            demoReachPointerRt = ptrGo.GetComponent<RectTransform>();
+            demoReachPointerRt.sizeDelta = new Vector2(22f, 22f);
+        }
+
+        private void BuildDemoCharacter(Transform viewportTransform)
+        {
+            Sprite circle = MainMenuUIBuilder.GetCircleSprite();
+            Sprite ring = MainMenuUIBuilder.GetRingSprite();
+
+            GameObject root = MainMenuUIBuilder.NewUI("DemoCharacter", viewportTransform);
+            demoRunnerRoot = root.GetComponent<RectTransform>();
+            demoRunnerRoot.sizeDelta = new Vector2(MainMenuUI.DemoCharacterWidthPx, MainMenuUI.DemoCharacterHeightPx);
+            demoRunnerRoot.pivot = new Vector2(0.5f, 0f); // Bottom-center feet pivot
+
+            GameObject pulseGo = MainMenuUIBuilder.NewUI("PhaseShiftPulse", root.transform);
+            demoShiftPulseImg = pulseGo.AddComponent<Image>();
+            demoShiftPulseImg.sprite = ring;
+            demoShiftPulseImg.color = new Color(0.45f, 0.92f, 1f, 0f);
+            demoShiftPulseImg.raycastTarget = false;
+            demoShiftPulseRt = pulseGo.GetComponent<RectTransform>();
+            MainMenuUIBuilder.AnchorToBottomCenter(demoShiftPulseRt);
+            demoShiftPulseRt.pivot = new Vector2(0.5f, 0.5f);
+            demoShiftPulseRt.anchoredPosition = new Vector2(0f, MainMenuUI.DemoCharacterHeightPx * 0.5f);
+            demoShiftPulseRt.sizeDelta = new Vector2(72f, 72f);
+
+            GameObject haloGo = MainMenuUIBuilder.NewUI("GlowHalo", root.transform);
+            demoCharacterHaloImg = haloGo.AddComponent<Image>();
+            demoCharacterHaloImg.sprite = circle;
+            demoCharacterHaloImg.color = new Color(1f, 1f, 1f, 0.25f);
+            demoCharacterHaloImg.raycastTarget = false;
+            RectTransform haloRt = haloGo.GetComponent<RectTransform>();
+            MainMenuUIBuilder.AnchorToBottomCenter(haloRt);
+            haloRt.pivot = new Vector2(0.5f, 0.5f);
+            haloRt.anchoredPosition = new Vector2(0f, MainMenuUI.DemoCharacterHeightPx * 0.5f);
+            haloRt.sizeDelta = new Vector2(150f, 150f);
+
+            // Authoritative SilhouetteMotion Body & Rim Layers (includes Idle, Run, Jump, and 2-armed Celebrate/AnMung)
+            GameObject bodyGo = MainMenuUIBuilder.NewUI("OpticalBody", root.transform);
+            demoCharacterBodyImg = bodyGo.AddComponent<Image>();
+            demoCharacterBodyImg.raycastTarget = false;
+            demoCharacterBodyImg.preserveAspect = false;
+            RectTransform bodyRt = bodyGo.GetComponent<RectTransform>();
+            MainMenuUIBuilder.AnchorToBottomCenter(bodyRt);
+            bodyRt.pivot = new Vector2(0.5f, 0f);
+            bodyRt.anchoredPosition = new Vector2(0f, -4f);
+            bodyRt.sizeDelta = new Vector2(MainMenuUI.DemoCharacterWidthPx, MainMenuUI.DemoCharacterHeightPx);
+
+            GameObject rimGo = MainMenuUIBuilder.NewUI("OpticalRim", root.transform);
+            demoCharacterRimImg = rimGo.AddComponent<Image>();
+            demoCharacterRimImg.raycastTarget = false;
+            demoCharacterRimImg.preserveAspect = false;
+            RectTransform rimRt = rimGo.GetComponent<RectTransform>();
+            MainMenuUIBuilder.AnchorToBottomCenter(rimRt);
+            rimRt.pivot = new Vector2(0.5f, 0f);
+            rimRt.anchoredPosition = new Vector2(0f, -4f);
+            rimRt.sizeDelta = new Vector2(MainMenuUI.DemoCharacterWidthPx, MainMenuUI.DemoCharacterHeightPx);
+
+            // Fallback procedural silhouette parts (only enabled if SilhouetteMotion sprite sheets are unavailable)
+            GameObject legL = MainMenuUIBuilder.NewUI("LegL", root.transform);
+            demoLegLeftImg = legL.AddComponent<Image>();
+            demoLegLeftImg.color = Color.white;
+            demoLegLeftImg.raycastTarget = false;
+            demoLegLeft = legL.GetComponent<RectTransform>();
+            MainMenuUIBuilder.AnchorToBottomCenter(demoLegLeft);
+            demoLegLeft.pivot = new Vector2(0.5f, 1f);
+            demoLegLeft.anchoredPosition = new Vector2(-14f, 52f);
+            demoLegLeft.sizeDelta = new Vector2(16f, 52f);
+
+            GameObject legR = MainMenuUIBuilder.NewUI("LegR", root.transform);
+            demoLegRightImg = legR.AddComponent<Image>();
+            demoLegRightImg.color = Color.white;
+            demoLegRightImg.raycastTarget = false;
+            demoLegRight = legR.GetComponent<RectTransform>();
+            MainMenuUIBuilder.AnchorToBottomCenter(demoLegRight);
+            demoLegRight.pivot = new Vector2(0.5f, 1f);
+            demoLegRight.anchoredPosition = new Vector2(14f, 52f);
+            demoLegRight.sizeDelta = new Vector2(16f, 52f);
+
+            GameObject torso = MainMenuUIBuilder.NewUI("Torso", root.transform);
+            demoTorsoImg = torso.AddComponent<Image>();
+            demoTorsoImg.color = Color.white;
+            demoTorsoImg.raycastTarget = false;
+            Outline torsoOut = torso.AddComponent<Outline>();
+            torsoOut.effectColor = new Color(0.55f, 0.85f, 1f, 0.65f);
+            torsoOut.effectDistance = new Vector2(1.5f, -1.5f);
+            RectTransform tRt = torso.GetComponent<RectTransform>();
+            MainMenuUIBuilder.AnchorToBottomCenter(tRt);
+            tRt.pivot = new Vector2(0.5f, 0f);
+            tRt.anchoredPosition = new Vector2(0f, 50f);
+            tRt.sizeDelta = new Vector2(54f, 64f);
+
+            GameObject head = MainMenuUIBuilder.NewUI("Head", root.transform);
+            demoHeadImg = head.AddComponent<Image>();
+            demoHeadImg.sprite = circle;
+            demoHeadImg.color = Color.white;
+            demoHeadImg.raycastTarget = false;
+            Outline headOut = head.AddComponent<Outline>();
+            headOut.effectColor = new Color(0.55f, 0.85f, 1f, 0.65f);
+            headOut.effectDistance = new Vector2(1.5f, -1.5f);
+            RectTransform hRt = head.GetComponent<RectTransform>();
+            MainMenuUIBuilder.AnchorToBottomCenter(hRt);
+            hRt.pivot = new Vector2(0.5f, 0f);
+            hRt.anchoredPosition = new Vector2(0f, 114f);
+            hRt.sizeDelta = new Vector2(48f, 48f);
+
+            GameObject eye = MainMenuUIBuilder.NewUI("Eye", head.transform);
+            demoEyeImg = eye.AddComponent<Image>();
+            demoEyeImg.color = new Color(0.20f, 0.85f, 1f, 1f);
+            demoEyeImg.raycastTarget = false;
+            RectTransform eRt = eye.GetComponent<RectTransform>();
+            eRt.anchoredPosition = new Vector2(10f, 2f);
+            eRt.sizeDelta = new Vector2(14f, 9f);
+        }
+
+        private void BuildDemoCircularIrisOverlay(Transform viewportTransform)
+        {
+            Color irisVoidColor = new Color(0.02f, 0.035f, 0.065f, 1f);
+
+            demoIrisRootGo = MainMenuUIBuilder.NewUI("DemoCircularIrisMask", viewportTransform);
+            MainMenuUIBuilder.Stretch(demoIrisRootGo.GetComponent<RectTransform>());
+
+            GameObject apertureGo = MainMenuUIBuilder.NewUI("IrisAperture", demoIrisRootGo.transform);
+            Image apImg = apertureGo.AddComponent<Image>();
+            apImg.sprite = MainMenuUIBuilder.GetIrisApertureSprite();
+            apImg.color = Color.white;
+            apImg.raycastTarget = false;
+            demoIrisApertureRt = apertureGo.GetComponent<RectTransform>();
+            demoIrisApertureRt.anchoredPosition = Vector2.zero;
+            demoIrisApertureRt.sizeDelta = new Vector2(1050f, 1050f);
+
+            demoIrisTopBarRt = CreateIrisFillBar(demoIrisRootGo.transform, "IrisTopBar", irisVoidColor);
+            demoIrisBottomBarRt = CreateIrisFillBar(demoIrisRootGo.transform, "IrisBottomBar", irisVoidColor);
+            demoIrisLeftBarRt = CreateIrisFillBar(demoIrisRootGo.transform, "IrisLeftBar", irisVoidColor);
+            demoIrisRightBarRt = CreateIrisFillBar(demoIrisRootGo.transform, "IrisRightBar", irisVoidColor);
+
+            demoIrisRootGo.SetActive(false);
+        }
+
+        private static RectTransform CreateIrisFillBar(Transform parent, string name, Color col)
+        {
+            GameObject go = MainMenuUIBuilder.NewUI(name, parent);
+            Image img = go.AddComponent<Image>();
+            img.color = col;
+            img.raycastTarget = false;
+            return go.GetComponent<RectTransform>();
+        }
+
+        private void UpdateDemoCircularIrisVisual()
+        {
+            if (demoIrisRootGo == null || demoIrisApertureRt == null)
+                return;
+
+            float irisNorm = Simulation.IrisNormalized;
+            if (irisNorm >= 0.995f)
+            {
+                if (demoIrisRootGo.activeSelf)
+                    demoIrisRootGo.SetActive(false);
+                return;
+            }
+
+            if (!demoIrisRootGo.activeSelf)
+                demoIrisRootGo.SetActive(true);
+
+            Vector2 center = Vector2.Lerp(new Vector2(120f, -36f), Vector2.zero, irisNorm);
+            float diameter = Mathf.Max(0f, irisNorm * 1060f);
+            demoIrisApertureRt.anchoredPosition = center;
+            demoIrisApertureRt.sizeDelta = new Vector2(diameter, diameter);
+
+            float half = diameter * 0.49f;
+            const float vpHalfW = 420f;
+            const float vpHalfH = 250f;
+
+            float topBottom = center.y + half;
+            float topH = Mathf.Max(0f, vpHalfH - topBottom);
+            demoIrisTopBarRt.anchoredPosition = new Vector2(0f, topBottom + topH * 0.5f);
+            demoIrisTopBarRt.sizeDelta = new Vector2(vpHalfW * 2f, topH + 4f);
+
+            float botTop = center.y - half;
+            float botH = Mathf.Max(0f, botTop - (-vpHalfH));
+            demoIrisBottomBarRt.anchoredPosition = new Vector2(0f, -vpHalfH + botH * 0.5f);
+            demoIrisBottomBarRt.sizeDelta = new Vector2(vpHalfW * 2f, botH + 4f);
+
+            float leftRight = center.x - half;
+            float leftW = Mathf.Max(0f, leftRight - (-vpHalfW));
+            demoIrisLeftBarRt.anchoredPosition = new Vector2(-vpHalfW + leftW * 0.5f, center.y);
+            demoIrisLeftBarRt.sizeDelta = new Vector2(leftW + 4f, diameter + 4f);
+
+            float rightLeft = center.x + half;
+            float rightW = Mathf.Max(0f, vpHalfW - rightLeft);
+            demoIrisRightBarRt.anchoredPosition = new Vector2(rightLeft + rightW * 0.5f, center.y);
+            demoIrisRightBarRt.sizeDelta = new Vector2(rightW + 4f, diameter + 4f);
+        }
+
+        private void BuildDemoPhaseBar(Transform stageTransform)
+        {
+            GameObject barWrap = MainMenuUIBuilder.NewUI("DemoPhaseBarWrap", stageTransform);
+            RectTransform bwRt = barWrap.GetComponent<RectTransform>();
+            bwRt.sizeDelta = new Vector2(796f, 84f);
+            bwRt.anchoredPosition = new Vector2(0f, -294f);
+
+            float segW = 158f;
+            CreateDemoSegment(barWrap.transform, "SegWhite", "Pha Trắng", new Vector2(-240f, 14f), segW, new Color(0.94f, 0.97f, 1f, 0.96f), new Color(0.08f, 0.12f, 0.18f, 1f));
+            CreateDemoSegment(barWrap.transform, "SegGray", "Pha Xám", new Vector2(-74f, 14f), segW, new Color(0.54f, 0.59f, 0.66f, 0.96f), new Color(0.96f, 0.98f, 1f, 1f));
+            CreateDemoSegment(barWrap.transform, "SegBlack", "Pha Đen", new Vector2(92f, 14f), segW, new Color(0.14f, 0.18f, 0.25f, 0.98f), new Color(0.88f, 0.94f, 1f, 1f));
+
+            GameObject thumb = MainMenuUIBuilder.NewUI("PhaseThumbIndicator", barWrap.transform);
+            demoPhaseThumbImg = thumb.AddComponent<Image>();
+            LabStyleUI.ApplySlicedSprite(demoPhaseThumbImg, LabStyleUI.GetPrimaryButtonSprite(), false);
+            demoPhaseThumbImg.color = new Color(0.55f, 0.82f, 1f, 0.42f);
+            demoPhaseThumbImg.raycastTarget = false;
+            demoPhaseThumbRt = thumb.GetComponent<RectTransform>();
+            demoPhaseThumbRt.sizeDelta = new Vector2(segW + 10f, 40f);
+            demoPhaseThumbRt.anchoredPosition = new Vector2(92f, 14f);
+
+            MainMenuUIBuilder.CreateSubLabel(
+                barWrap.transform,
+                "QuickControlsTag",
+                "← / → : Đổi pha màu\nSPACE : Nhảy   ·   X : Ghi toạ độ",
+                new Vector2(288f, 14f),
+                new Vector2(224f, 44f),
+                12,
+                FontStyle.Bold,
+                LabStyleUI.TextSecondary,
+                TextAnchor.MiddleRight);
+
+            MainMenuUIBuilder.CreateSubLabel(
+                barWrap.transform,
+                "RuleSummaryFooter",
+                "Quy tắc giao thoa: Đi xuyên qua vật cản cùng pha màu và đứng vững trên vật cản khác pha màu",
+                new Vector2(0f, -26f),
+                new Vector2(796f, 24f),
+                12,
+                FontStyle.Normal,
+                LabStyleUI.TextMuted,
+                TextAnchor.MiddleCenter);
+        }
+
+        private static void CreateDemoSegment(Transform parent, string name, string textStr, Vector2 pos, float width, Color bgCol, Color textCol)
+        {
+            GameObject seg = MainMenuUIBuilder.NewUI(name, parent);
+            Image img = seg.AddComponent<Image>();
+            LabStyleUI.ApplySlicedSprite(img, LabStyleUI.GetRecessedSlotSprite(), false);
+            img.color = bgCol;
+            img.raycastTarget = false;
+            RectTransform rt = seg.GetComponent<RectTransform>();
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = new Vector2(width, 32f);
+
+            MainMenuUIBuilder.CreateSubLabel(seg.transform, "Lbl", textStr, Vector2.zero, new Vector2(width, 32f), 12, FontStyle.Bold, textCol, TextAnchor.MiddleCenter);
+        }
+    }
+}
+
