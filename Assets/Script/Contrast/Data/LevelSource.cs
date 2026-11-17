@@ -90,12 +90,15 @@ namespace Contrast.Data
 
         public override string ToString()
         {
-            return SourceType switch
+            switch (SourceType)
             {
-                LevelSourceType.PackagedResource => $"[PackagedResource] {ResourcePath}",
-                LevelSourceType.FilePath => $"[FilePath] {FilePath}",
-                _ => "[InMemoryJson]"
-            };
+                case LevelSourceType.PackagedResource:
+                    return $"[PackagedResource] {ResourcePath}";
+                case LevelSourceType.FilePath:
+                    return $"[FilePath] {FilePath}";
+                default:
+                    return "[InMemoryJson]";
+            }
         }
     }
 }

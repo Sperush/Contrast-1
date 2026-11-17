@@ -338,7 +338,7 @@ namespace Contrast.UI
         private static Font GetFont()
         {
 #if UNITY_2022_2_OR_NEWER
-            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return Contrast.Core.UnityCompat.GetBuiltinFont();
 #else
             return Resources.GetBuiltinResource<Font>("Arial.ttf");
 #endif

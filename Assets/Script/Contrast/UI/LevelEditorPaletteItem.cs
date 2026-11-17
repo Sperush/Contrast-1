@@ -19,13 +19,15 @@ namespace Contrast.UI
 
         public void OnPointerDown(PointerEventData eventData)
         {
-            controller ??= FindAnyObjectByType<LevelEditorController>();
+            if (controller == null)
+                controller = Contrast.Core.UnityCompat.FindAny<LevelEditorController>();
             controller?.BeginPaletteDrag(markerType, isMarker);
         }
 
         public void OnPointerUp(PointerEventData eventData)
         {
-            controller ??= FindAnyObjectByType<LevelEditorController>();
+            if (controller == null)
+                controller = Contrast.Core.UnityCompat.FindAny<LevelEditorController>();
             controller?.EndPaletteDrag(eventData.position);
         }
     }

@@ -100,17 +100,17 @@ namespace Contrast.Level
 
         private void Awake()
         {
-            levelLoader ??= FindAnyObjectByType<LevelLoader>();
-            ui ??= FindAnyObjectByType<LevelEditorUI>(FindObjectsInactive.Include);
+            if (levelLoader == null) levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>();
+            if (ui == null) ui = Contrast.Core.UnityCompat.FindAny<LevelEditorUI>(true);
             ui?.SetController(this);
-            trajectoryController ??= new TrajectoryEditController(handleSize, handleHitRadius);
+            if (trajectoryController == null) trajectoryController = new TrajectoryEditController(handleSize, handleHitRadius);
         }
 
         public void StartEditing()
         {
             editing = true;
             EnsureDependencies();
-            trajectoryController ??= new TrajectoryEditController(handleSize, handleHitRadius);
+            if (trajectoryController == null) trajectoryController = new TrajectoryEditController(handleSize, handleHitRadius);
 
             // Rebuild scene from working copy if returning from gameplay or editing
             if (editorWorkingCopy != null)
@@ -187,7 +187,7 @@ namespace Contrast.Level
             if (picker == null && GameManager.Instance != null)
                 picker = GameManager.Instance.LevelSelectUI;
             if (picker == null)
-                picker = FindAnyObjectByType<LevelSelectUI>(FindObjectsInactive.Include);
+                picker = Contrast.Core.UnityCompat.FindAny<LevelSelectUI>(true);
             if (picker == null)
             {
                 GameObject pickerGo = new GameObject("LevelSelectUI");
@@ -317,7 +317,7 @@ namespace Contrast.Level
             activeResizeHandle = ResizeHandleKind.None;
             activeTrajHandle = TrajectoryHandleKind.None;
 
-            trajectoryController ??= new TrajectoryEditController(handleSize, handleHitRadius);
+            if (trajectoryController == null) trajectoryController = new TrajectoryEditController(handleSize, handleHitRadius);
             trajectoryController.SetTarget(platform, ui);
             ui?.SetSelectedPlatform(platform);
             RefreshHandles();
@@ -903,7 +903,7 @@ namespace Contrast.Level
             // 3. Fallback: Saved camera boundary from CameraFollow or working copy
             if (!hasPoint)
             {
-                CameraFollow camFollow = FindAnyObjectByType<CameraFollow>();
+                CameraFollow camFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>();
                 if (camFollow != null && camFollow.HasBoundary)
                 {
                     IncludeAabb(camFollow.BoundaryCenter, camFollow.BoundarySize);
@@ -1163,7 +1163,7 @@ namespace Contrast.Level
                 data.checkPoint = null;
 
             // Camera boundary
-            CameraFollow camFollow = FindAnyObjectByType<CameraFollow>();
+            CameraFollow camFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>();
             if (camFollow != null && camFollow.HasBoundary)
             {
                 data.cameraBoundary = new CameraBoundaryData
@@ -1370,7 +1370,7 @@ namespace Contrast.Level
             CreateResizeHandle(ResizeHandleKind.Top, UnityEngine.Color.white);
             CreateResizeHandle(ResizeHandleKind.Bottom, UnityEngine.Color.white);
 
-            trajectoryController ??= new TrajectoryEditController(handleSize, handleHitRadius);
+            if (trajectoryController == null) trajectoryController = new TrajectoryEditController(handleSize, handleHitRadius);
             trajectoryController.Initialize(handleRoot.transform);
         }
 
@@ -1584,14 +1584,14 @@ namespace Contrast.Level
             LevelMarker.ClearRegistry();
 
             // Sweep any stray or orphaned platforms / markers in the scene
-            ColorPlatform[] strayPlatforms = FindObjectsByType<ColorPlatform>();
+            ColorPlatform[] strayPlatforms = Contrast.Core.UnityCompat.FindAll<ColorPlatform>();
             for (int i = 0; i < strayPlatforms.Length; i++)
             {
                 if (strayPlatforms[i] != null && strayPlatforms[i].gameObject != null)
                     SafeDestroy(strayPlatforms[i].gameObject);
             }
 
-            LevelMarker[] strayMarkers = FindObjectsByType<LevelMarker>();
+            LevelMarker[] strayMarkers = Contrast.Core.UnityCompat.FindAll<LevelMarker>();
             for (int i = 0; i < strayMarkers.Length; i++)
             {
                 if (strayMarkers[i] != null && strayMarkers[i].gameObject != null)
@@ -1656,7 +1656,7 @@ namespace Contrast.Level
         private Transform FindOrCreatePlatformRoot()
         {
             if (levelLoader == null)
-                levelLoader = FindAnyObjectByType<LevelLoader>();
+                levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>();
 
             if (levelLoader != null)
                 return levelLoader.PlatformsRoot;
@@ -1671,7 +1671,7 @@ namespace Contrast.Level
         private Transform FindOrCreateEditorRoot()
         {
             if (levelLoader == null)
-                levelLoader = FindAnyObjectByType<LevelLoader>();
+                levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>();
 
             if (levelLoader != null)
                 return levelLoader.LevelObjectsRoot;
@@ -1685,8 +1685,8 @@ namespace Contrast.Level
 
         private void EnsureDependencies()
         {
-            levelLoader ??= FindAnyObjectByType<LevelLoader>();
-            ui ??= FindAnyObjectByType<LevelEditorUI>(FindObjectsInactive.Include);
+            if (levelLoader == null) levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>();
+            if (ui == null) ui = Contrast.Core.UnityCompat.FindAny<LevelEditorUI>(true);
             ui?.SetController(this);
         }
 

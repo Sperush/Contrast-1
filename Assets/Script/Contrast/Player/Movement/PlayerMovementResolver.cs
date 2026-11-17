@@ -37,8 +37,10 @@ namespace Contrast.Player
             float deltaTime,
             Vector2 riderMove = default)
         {
-            overlapResolver ??= GetComponent<PlayerOverlapResolver>();
-            collisionResolver ??= GetComponent<PlayerCollisionResolver>();
+            if (overlapResolver == null)
+                overlapResolver = GetComponent<PlayerOverlapResolver>();
+            if (collisionResolver == null)
+                collisionResolver = GetComponent<PlayerCollisionResolver>();
 
             Vector2 safeSize = new Vector2(
                 Mathf.Max(0.0001f, Mathf.Abs(playerSize.x)),

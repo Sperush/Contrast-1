@@ -158,13 +158,19 @@ namespace Contrast.Level
         private int lastInputMarkFrame = -1;
         private int markEventSequence = 0;
 
-        public int CurrentTargetIndex => CurrentStep switch
+        public int CurrentTargetIndex
         {
-            NewtonFinaleStep.CaptureK => 0,
-            NewtonFinaleStep.CaptureI => 1,
-            NewtonFinaleStep.CaptureKp => 2,
-            _ => 3
-        };
+            get
+            {
+                switch (CurrentStep)
+                {
+                    case NewtonFinaleStep.CaptureK: return 0;
+                    case NewtonFinaleStep.CaptureI: return 1;
+                    case NewtonFinaleStep.CaptureKp: return 2;
+                    default: return 3;
+                }
+            }
+        }
 
         public int MarkEventSequence => markEventSequence;
         public string LastMarkRejectionReason { get; private set; } = "NONE";
@@ -231,13 +237,21 @@ namespace Contrast.Level
                 // L02 (k=4): 67.617188 - 1.953125 * 0.5 = 66.6406255f
                 // L01 (k=6): 68.414062 - 2.890625 * 0.5 = 66.9687495f
                 // L03 (k=7): 65.75 - 6.84375 * 0.5      = 62.3281250f
-                thresholdX = fringeOrderK switch
+                switch (fringeOrderK)
                 {
-                    4 => 67.617188f - 1.953125f * 0.5f,
-                    6 => 68.414062f - 2.890625f * 0.5f,
-                    7 => 65.75f - 6.84375f * 0.5f,
-                    _ => centerO.x - ringScale * 3.84f
-                };
+                    case 4:
+                        thresholdX = 67.617188f - 1.953125f * 0.5f;
+                        break;
+                    case 6:
+                        thresholdX = 68.414062f - 2.890625f * 0.5f;
+                        break;
+                    case 7:
+                        thresholdX = 65.75f - 6.84375f * 0.5f;
+                        break;
+                    default:
+                        thresholdX = centerO.x - ringScale * 3.84f;
+                        break;
+                }
             }
         }
 
@@ -254,7 +268,7 @@ namespace Contrast.Level
         public void SyncCameraTransitionConfig()
         {
             if (cameraFollow == null)
-                cameraFollow = FindAnyObjectByType<CameraFollow>();
+                cameraFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>();
             if (cameraFollow == null)
                 return;
 
@@ -283,8 +297,8 @@ namespace Contrast.Level
             if (Instance == null)
                 Instance = this;
 
-            player = pc != null ? pc : FindAnyObjectByType<PlayerController>();
-            cameraFollow = cf != null ? cf : FindAnyObjectByType<CameraFollow>();
+            player = pc != null ? pc : Contrast.Core.UnityCompat.FindAny<PlayerController>();
+            cameraFollow = cf != null ? cf : Contrast.Core.UnityCompat.FindAny<CameraFollow>();
 
             if (newtonData != null)
             {
@@ -1279,12 +1293,12 @@ namespace Contrast.Level
 
             if (player == null)
             {
-                player = FindAnyObjectByType<PlayerController>();
+                player = Contrast.Core.UnityCompat.FindAny<PlayerController>();
                 if (player == null) return;
             }
 
             if (cameraFollow == null)
-                cameraFollow = FindAnyObjectByType<CameraFollow>();
+                cameraFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>();
 
             // Handle proximity to finale chamber using the pre-Newton platform left boundary (Task E).
             // Camera position and orthographicSize are updated exclusively by CameraFollow.ProcessCameraUpdate().
@@ -2008,7 +2022,7 @@ namespace Contrast.Level
         private static Font GetFont()
         {
 #if UNITY_2022_2_OR_NEWER
-            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return Contrast.Core.UnityCompat.GetBuiltinFont();
 #else
             return Resources.GetBuiltinResource<Font>("Arial.ttf");
 #endif

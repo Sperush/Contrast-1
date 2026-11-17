@@ -68,7 +68,7 @@ namespace Contrast.Audio
         {
             if (Instance == null)
             {
-                Instance = FindAnyObjectByType<ContrastAudioManager>();
+                Instance = Contrast.Core.UnityCompat.FindAny<ContrastAudioManager>();
                 if (Instance == null)
                 {
                     GameObject go = new GameObject("ContrastAudioManager");

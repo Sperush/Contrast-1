@@ -226,7 +226,7 @@ namespace Contrast.Build
             if (File.Exists(MainMenuScenePath))
             {
                 EditorSceneManager.OpenScene(MainMenuScenePath, OpenSceneMode.Single);
-                var menuUI = UnityEngine.Object.FindAnyObjectByType<Contrast.UI.MainMenuUI>();
+                var menuUI = Contrast.Core.UnityCompat.FindAny<Contrast.UI.MainMenuUI>();
                 if (menuUI != null)
                 {
                     menuUI.EnsureInitialized();

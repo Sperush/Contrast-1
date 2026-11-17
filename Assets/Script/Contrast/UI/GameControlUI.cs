@@ -176,7 +176,7 @@ namespace Contrast.UI
         {
             EventSystem.current?.SetSelectedGameObject(null);
             ContrastAudioManager.Instance?.PlayButtonClick();
-            PhaseTunerUI tuner = PhaseTunerUI.Instance ?? FindAnyObjectByType<PhaseTunerUI>();
+            PhaseTunerUI tuner = PhaseTunerUI.Instance ?? Contrast.Core.UnityCompat.FindAny<PhaseTunerUI>();
             if (tuner == null)
             {
                 GameObject go = new GameObject("PhaseTunerUI");
@@ -191,7 +191,7 @@ namespace Contrast.UI
                 return;
 
             if (cachedPlayer == null)
-                cachedPlayer = FindAnyObjectByType<PlayerController>();
+                cachedPlayer = Contrast.Core.UnityCompat.FindAny<PlayerController>();
 
             float progress = ComputeExperimentProgress();
             grooveFillRt.anchorMax = new Vector2(Mathf.Clamp(progress, 0.04f, 1f), 1f);
@@ -381,7 +381,7 @@ namespace Contrast.UI
 
         private static void EnsureEventSystem()
         {
-            if (FindAnyObjectByType<EventSystem>() != null)
+            if (Contrast.Core.UnityCompat.FindAny<EventSystem>() != null)
                 return;
 
             GameObject go = new GameObject("EventSystem");

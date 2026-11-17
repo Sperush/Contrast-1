@@ -10,7 +10,7 @@ public static class PlayerPlatformAuditor
     {
         Debug.Log("=== AUDIT: PLAYER & PLATFORM GEOMETRY START ===");
         
-        PlayerController player = Object.FindAnyObjectByType<PlayerController>();
+        PlayerController player = Contrast.Core.UnityCompat.FindAny<PlayerController>();
         if (player != null)
         {
             Transform pt = player.transform;
@@ -52,7 +52,7 @@ public static class PlayerPlatformAuditor
             Debug.Log("[AUDIT-PLAYER] PlayerController not found in active scene!");
         }
 
-        ColorPlatform[] platforms = Object.FindObjectsByType<ColorPlatform>(FindObjectsSortMode.None);
+        ColorPlatform[] platforms = Contrast.Core.UnityCompat.FindAll<ColorPlatform>();
         Debug.Log($"[AUDIT-PLATFORMS] Found {platforms.Length} platforms.");
         foreach (var plat in platforms)
         {

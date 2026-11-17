@@ -107,12 +107,19 @@ namespace Contrast.Presentation
                 baseRenderer.transform.localScale = new Vector3(size.x * 1.2f, size.y * 1.2f, 1f);
                 glowRenderer.transform.localScale = new Vector3(size.x * 0.7f, size.y * 0.7f, 1f);
 
-                Color col = marker.LogicalColor switch
+                Color col;
+                switch (marker.LogicalColor)
                 {
-                    LogicalColor.White => new Color(0.95f, 0.98f, 1f, 0.75f),
-                    LogicalColor.Gray => new Color(0.65f, 0.72f, 0.80f, 0.75f),
-                    _ => new Color(0.35f, 0.45f, 0.55f, 0.75f)
-                };
+                    case LogicalColor.White:
+                        col = new Color(0.95f, 0.98f, 1f, 0.75f);
+                        break;
+                    case LogicalColor.Gray:
+                        col = new Color(0.65f, 0.72f, 0.80f, 0.75f);
+                        break;
+                    default:
+                        col = new Color(0.35f, 0.45f, 0.55f, 0.75f);
+                        break;
+                }
 
                 baseRenderer.color = col;
                 glowRenderer.color = Color.white;

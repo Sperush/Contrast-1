@@ -110,7 +110,7 @@ namespace Contrast.Presentation
 
         private void Start()
         {
-            player = FindAnyObjectByType<PlayerController>();
+            player = Contrast.Core.UnityCompat.FindAny<PlayerController>();
         }
 
         public void TriggerCheckpointFlash()
@@ -587,14 +587,14 @@ namespace Contrast.Presentation
         private void Update()
         {
             if (player == null)
-                player = FindAnyObjectByType<PlayerController>();
+                player = Contrast.Core.UnityCompat.FindAny<PlayerController>();
 
             // Only show tuner and hints during Gameplay (Playing state)
             GameManager gm = GameManager.Instance;
             bool isPlaying = gm != null && gm.State == GameState.Playing;
 
             if (cachedCameraFollow == null)
-                cachedCameraFollow = FindAnyObjectByType<Contrast.Camera.CameraFollow>();
+                cachedCameraFollow = Contrast.Core.UnityCompat.FindAny<Contrast.Camera.CameraFollow>();
             var newtonCtrl = Contrast.Level.EasyNewtonFinaleController.Instance;
             var camFollow = cachedCameraFollow;
             bool isNewtonFramingActive =
@@ -623,7 +623,7 @@ namespace Contrast.Presentation
             UpdateNewtonFramingLayout(isNewtonFramingActive, Time.unscaledDeltaTime, false);
 
             if (player == null)
-                player = FindAnyObjectByType<PlayerController>();
+                player = Contrast.Core.UnityCompat.FindAny<PlayerController>();
 
             float currentPhase = player != null ? player.CurrentPhase : simulatedPhase;
             LogicalColor color = player != null ? player.CurrentColor : LogicalColor.White;
@@ -772,7 +772,7 @@ namespace Contrast.Presentation
         private static Font GetFont()
         {
 #if UNITY_2022_2_OR_NEWER
-            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return Contrast.Core.UnityCompat.GetBuiltinFont();
 #else
             return Resources.GetBuiltinResource<Font>("Arial.ttf");
 #endif

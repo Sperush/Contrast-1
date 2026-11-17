@@ -120,13 +120,13 @@ namespace Contrast.Core
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureGameplaySceneLoaded()
         {
-            if (FindAnyObjectByType<GameManager>(FindObjectsInactive.Include) != null)
+            if (Contrast.Core.UnityCompat.FindAny<GameManager>(true) != null)
                 return;
 
-            if (FindAnyObjectByType<MainMenuUI>(FindObjectsInactive.Include) != null)
+            if (Contrast.Core.UnityCompat.FindAny<MainMenuUI>(true) != null)
                 return;
 
-            if (FindAnyObjectByType<StandaloneLevelEditorBootstrapper>(FindObjectsInactive.Include) != null)
+            if (Contrast.Core.UnityCompat.FindAny<StandaloneLevelEditorBootstrapper>(true) != null)
                 return;
 
             string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
@@ -155,15 +155,15 @@ namespace Contrast.Core
 
             Instance = this;
 
-            player ??= FindAnyObjectByType<PlayerController>(FindObjectsInactive.Include);
-            levelLoader ??= FindAnyObjectByType<LevelLoader>(FindObjectsInactive.Include);
-            cameraFollow ??= FindAnyObjectByType<CameraFollow>(FindObjectsInactive.Include);
-            gameOverUI ??= FindAnyObjectByType<GameOverUI>(FindObjectsInactive.Include);
-            gameControlUI ??= FindAnyObjectByType<GameControlUI>(FindObjectsInactive.Include);
-            inGameMenuUI ??= FindAnyObjectByType<InGameMenuUI>(FindObjectsInactive.Include);
-            mainMenuUI ??= FindAnyObjectByType<MainMenuUI>(FindObjectsInactive.Include);
-            loadingOverlayUI ??= FindAnyObjectByType<LoadingOverlayUI>(FindObjectsInactive.Include);
-            virtualControlsUI ??= FindAnyObjectByType<VirtualControlsUI>(FindObjectsInactive.Include);
+            if (player == null) player = Contrast.Core.UnityCompat.FindAny<PlayerController>(true);
+            if (levelLoader == null) levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>(true);
+            if (cameraFollow == null) cameraFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>(true);
+            if (gameOverUI == null) gameOverUI = Contrast.Core.UnityCompat.FindAny<GameOverUI>(true);
+            if (gameControlUI == null) gameControlUI = Contrast.Core.UnityCompat.FindAny<GameControlUI>(true);
+            if (inGameMenuUI == null) inGameMenuUI = Contrast.Core.UnityCompat.FindAny<InGameMenuUI>(true);
+            if (mainMenuUI == null) mainMenuUI = Contrast.Core.UnityCompat.FindAny<MainMenuUI>(true);
+            if (loadingOverlayUI == null) loadingOverlayUI = Contrast.Core.UnityCompat.FindAny<LoadingOverlayUI>(true);
+            if (virtualControlsUI == null) virtualControlsUI = Contrast.Core.UnityCompat.FindAny<VirtualControlsUI>(true);
 
             if (gameOverUI == null)
                 gameOverUI = new GameObject("GameOverUI").AddComponent<GameOverUI>();
@@ -186,19 +186,19 @@ namespace Contrast.Core
                 loadingOverlayUI = new GameObject("LoadingOverlayUI").AddComponent<LoadingOverlayUI>();
 
             // Ensure Load Level from JSON and Level Editor UI/Controller are disabled if present
-            levelSelectUI ??= FindAnyObjectByType<LevelSelectUI>(FindObjectsInactive.Include);
+            if (levelSelectUI == null) levelSelectUI = Contrast.Core.UnityCompat.FindAny<LevelSelectUI>(true);
             if (levelSelectUI != null)
                 levelSelectUI.Show(false);
 
-            levelEditor ??= FindAnyObjectByType<LevelEditorController>(FindObjectsInactive.Include);
+            if (levelEditor == null) levelEditor = Contrast.Core.UnityCompat.FindAny<LevelEditorController>(true);
             if (levelEditor != null)
                 levelEditor.StopEditing();
 
-            levelEditorUI ??= FindAnyObjectByType<LevelEditorUI>(FindObjectsInactive.Include);
+            if (levelEditorUI == null) levelEditorUI = Contrast.Core.UnityCompat.FindAny<LevelEditorUI>(true);
             if (levelEditorUI != null)
                 levelEditorUI.Show(false);
 
-            testModeUI ??= FindAnyObjectByType<TestModeUI>(FindObjectsInactive.Include);
+            if (testModeUI == null) testModeUI = Contrast.Core.UnityCompat.FindAny<TestModeUI>(true);
             if (testModeUI == null)
                 testModeUI = new GameObject("TestModeUI").AddComponent<TestModeUI>();
 
@@ -679,7 +679,7 @@ namespace Contrast.Core
             }
 
             if (mainMenuUI == null)
-                mainMenuUI = FindAnyObjectByType<MainMenuUI>(FindObjectsInactive.Include)
+                mainMenuUI = Contrast.Core.UnityCompat.FindAny<MainMenuUI>(true)
                              ?? new GameObject("MainMenuUI").AddComponent<MainMenuUI>();
 
             SetState(GameState.MainMenu);

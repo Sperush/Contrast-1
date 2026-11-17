@@ -173,15 +173,23 @@ namespace Contrast.Presentation
         public static int GetFrameCount(string clipName)
         {
             EnsureSilhouetteFramesLoaded();
-            return clipName switch
+            switch (clipName)
             {
-                "Idle" => cachedIdleBodyFrames != null ? cachedIdleBodyFrames.Length : 0,
-                "Run" => cachedRunBodyFrames != null ? cachedRunBodyFrames.Length : 0,
-                "Jump" => cachedJumpBodyFrames != null ? cachedJumpBodyFrames.Length : 0,
-                "Celebrate" or "AnMung" => cachedCelebrateBodyFrames != null ? cachedCelebrateBodyFrames.Length : 0,
-                "PointMark" or "ChonDiem" => cachedPointMarkBodyFrames != null ? cachedPointMarkBodyFrames.Length : 0,
-                _ => 0
-            };
+                case "Idle":
+                    return cachedIdleBodyFrames != null ? cachedIdleBodyFrames.Length : 0;
+                case "Run":
+                    return cachedRunBodyFrames != null ? cachedRunBodyFrames.Length : 0;
+                case "Jump":
+                    return cachedJumpBodyFrames != null ? cachedJumpBodyFrames.Length : 0;
+                case "Celebrate":
+                case "AnMung":
+                    return cachedCelebrateBodyFrames != null ? cachedCelebrateBodyFrames.Length : 0;
+                case "PointMark":
+                case "ChonDiem":
+                    return cachedPointMarkBodyFrames != null ? cachedPointMarkBodyFrames.Length : 0;
+                default:
+                    return 0;
+            }
         }
 
         public void InitializeVisuals()
@@ -656,12 +664,19 @@ namespace Contrast.Presentation
                 trailSpawnTimer = 0f;
                 if (trailCount < trailPool.Length)
                 {
-                    Color trailColor = player.CurrentColor switch
+                    Color trailColor;
+                    switch (player.CurrentColor)
                     {
-                        LogicalColor.White => new Color(0.95f, 0.97f, 1f, 0.35f),
-                        LogicalColor.Gray => new Color(0.55f, 0.6f, 0.65f, 0.25f),
-                        _ => new Color(0.75f, 0.82f, 0.88f, 0.2f)
-                    };
+                        case LogicalColor.White:
+                            trailColor = new Color(0.95f, 0.97f, 1f, 0.35f);
+                            break;
+                        case LogicalColor.Gray:
+                            trailColor = new Color(0.55f, 0.6f, 0.65f, 0.25f);
+                            break;
+                        default:
+                            trailColor = new Color(0.75f, 0.82f, 0.88f, 0.2f);
+                            break;
+                    }
 
                     trailPool[trailCount++] = new TrailGhost
                     {

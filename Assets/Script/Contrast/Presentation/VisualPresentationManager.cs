@@ -5,8 +5,10 @@ namespace Contrast.Presentation
     using Contrast.Level;
     using Contrast.Player;
     using UnityEngine;
+#if UNITY_2020_1_OR_NEWER
     using UnityEngine.Rendering;
     using UnityEngine.Rendering.Universal;
+#endif
     using Color = UnityEngine.Color;
     /// <summary>
     /// Central coordinator for the Contrast presentation pass.
@@ -24,7 +26,7 @@ namespace Contrast.Presentation
 
         private BackgroundPresentation background;
         private PhaseTunerUI phaseTuner;
-        private NewtonRingsPresentation newtonApparatus;
+        private NewtonRingsPresentation newtonApparatus = null;
 
         private readonly HashSet<ColorPlatform> decoratedPlatforms = new HashSet<ColorPlatform>();
         private readonly HashSet<LevelMarker> decoratedMarkers = new HashSet<LevelMarker>();
@@ -33,7 +35,7 @@ namespace Contrast.Presentation
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void AutoInitialize()
         {
-            if (FindAnyObjectByType<VisualPresentationManager>() == null)
+            if (Contrast.Core.UnityCompat.FindAny<VisualPresentationManager>() == null)
             {
                 GameObject go = new GameObject("VisualPresentationManager");
                 go.AddComponent<VisualPresentationManager>();
@@ -64,7 +66,7 @@ namespace Contrast.Presentation
             // 1. Background Presentation
             if (background == null)
             {
-                background = FindAnyObjectByType<BackgroundPresentation>();
+                background = Contrast.Core.UnityCompat.FindAny<BackgroundPresentation>();
                 if (background == null)
                 {
                     GameObject bgGo = new GameObject("BackgroundPresentation");
@@ -75,7 +77,7 @@ namespace Contrast.Presentation
             // 2. Phase Tuner UI
             if (phaseTuner == null)
             {
-                phaseTuner = FindAnyObjectByType<PhaseTunerUI>();
+                phaseTuner = Contrast.Core.UnityCompat.FindAny<PhaseTunerUI>();
                 if (phaseTuner == null)
                 {
                     GameObject uiGo = new GameObject("PhaseTunerUI");
@@ -86,6 +88,7 @@ namespace Contrast.Presentation
 
         private void ConfigureCameraPostProcessing()
         {
+#if UNITY_2020_1_OR_NEWER
             UnityEngine.Camera cam = UnityEngine.Camera.main;
             if (cam == null)
                 return;
@@ -97,7 +100,7 @@ namespace Contrast.Presentation
             }
 
             // Create Global Volume for subtle Bloom and Vignette matching HTML prototype
-            Volume volume = FindAnyObjectByType<Volume>();
+            Volume volume = Contrast.Core.UnityCompat.FindAny<Volume>();
             if (volume == null)
             {
                 GameObject volGo = new GameObject("GlobalPostProcessVolume");
@@ -126,6 +129,7 @@ namespace Contrast.Presentation
 
                 volume.profile = profile;
             }
+#endif
         }
 
         private void LateUpdate()
@@ -142,7 +146,7 @@ namespace Contrast.Presentation
             if (playerVisual != null)
                 return;
 
-            PlayerController pc = FindAnyObjectByType<PlayerController>();
+            PlayerController pc = Contrast.Core.UnityCompat.FindAny<PlayerController>();
             if (pc != null)
             {
                 playerVisual = pc.GetComponent<PlayerVisualPresentation>();

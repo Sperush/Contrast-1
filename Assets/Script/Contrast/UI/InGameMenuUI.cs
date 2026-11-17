@@ -576,7 +576,7 @@ namespace Contrast.UI
 
         private static void EnsureEventSystem()
         {
-            if (FindAnyObjectByType<EventSystem>() != null)
+            if (Contrast.Core.UnityCompat.FindAny<EventSystem>() != null)
                 return;
 
             GameObject go = new GameObject("EventSystem");

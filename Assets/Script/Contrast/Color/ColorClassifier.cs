@@ -27,23 +27,29 @@ namespace Contrast.Color
             return LogicalColor.Black;
         }
 
-        public static float DefaultValue(LogicalColor c) => c switch
+        public static float DefaultValue(LogicalColor c)
         {
-            LogicalColor.White => 0f,
-            LogicalColor.Gray => 127f,
-            LogicalColor.Black => 212f,
-            LogicalColor.Universal => 255f,
-            _ => 0f
-        };
+            switch (c)
+            {
+                case LogicalColor.White: return 0f;
+                case LogicalColor.Gray: return 127f;
+                case LogicalColor.Black: return 212f;
+                case LogicalColor.Universal: return 255f;
+                default: return 0f;
+            }
+        }
 
-        public static float ToValue(LogicalColor c) => c switch
+        public static float ToValue(LogicalColor c)
         {
-            LogicalColor.White => 1f,
-            LogicalColor.Gray => 0.522f,
-            LogicalColor.Black => 0.02f,
-            LogicalColor.Universal => 0.85f,
-            _ => 1f
-        };
+            switch (c)
+            {
+                case LogicalColor.White: return 1f;
+                case LogicalColor.Gray: return 0.522f;
+                case LogicalColor.Black: return 0.02f;
+                case LogicalColor.Universal: return 0.85f;
+                default: return 1f;
+            }
+        }
 
         public static UnityEngine.Color GetPlatformVisualColor(float raw)
         {
@@ -66,13 +72,16 @@ namespace Contrast.Color
             }
         }
 
-        public static string GetTypeName(LogicalColor c) => c switch
+        public static string GetTypeName(LogicalColor c)
         {
-            LogicalColor.White => "White (0..84)",
-            LogicalColor.Gray => "Gray (85..169)",
-            LogicalColor.Black => "Black (170..254)",
-            LogicalColor.Universal => "Everything (255)",
-            _ => "Unknown"
-        };
+            switch (c)
+            {
+                case LogicalColor.White: return "White (0..84)";
+                case LogicalColor.Gray: return "Gray (85..169)";
+                case LogicalColor.Black: return "Black (170..254)";
+                case LogicalColor.Universal: return "Everything (255)";
+                default: return "Unknown";
+            }
+        }
     }
 }

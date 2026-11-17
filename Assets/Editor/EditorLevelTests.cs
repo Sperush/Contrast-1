@@ -1221,7 +1221,7 @@ namespace Contrast.Tests
 
             loader.BuildRuntimeLevel(authoredData);
 
-            int editSceneCount = UnityEngine.Object.FindObjectsByType<ColorPlatform>().Length;
+            int editSceneCount = Contrast.Core.UnityCompat.FindAll<ColorPlatform>().Length;
             AssertTrue(ColorPlatform.All.Count == 2, "GhostTest_EditPlatformCount", "2 platforms registered in edit mode");
             AssertTrue(editSceneCount == 2, "GhostTest_EditSceneObjectCount", "Exactly 2 platform GameObjects in scene in edit mode");
 
@@ -1230,7 +1230,7 @@ namespace Contrast.Tests
             LevelData testPlayData = ctrl.BuildExportData();
             loader.BuildRuntimeLevel(testPlayData);
 
-            int testPlaySceneCount = UnityEngine.Object.FindObjectsByType<ColorPlatform>().Length;
+            int testPlaySceneCount = Contrast.Core.UnityCompat.FindAll<ColorPlatform>().Length;
             AssertTrue(ColorPlatform.All.Count == 2, "GhostTest_TestPlayPlatformCount", "Exactly 2 platforms registered during Test Play");
             AssertTrue(testPlaySceneCount == 2, "GhostTest_NoGhostObjectsCreated", "No ghost or duplicate platform GameObjects exist in scene on Test Play start");
 
@@ -1246,13 +1246,13 @@ namespace Contrast.Tests
             AssertApproximately(12f, movingPlat.transform.position.x, 0.05f, "GhostTest_PlatformMoved", "Moving platform advanced along trajectory to x=12");
 
             // Verify scene objects count remains 2 (no ghosts at original x=10)
-            int movingSceneCount = UnityEngine.Object.FindObjectsByType<ColorPlatform>().Length;
+            int movingSceneCount = Contrast.Core.UnityCompat.FindAll<ColorPlatform>().Length;
             AssertTrue(movingSceneCount == 2, "GhostTest_NoStationaryGhostAtOrigin", "Scene platform count strictly equals 2 during movement (no stationary ghosts at origin)");
 
             // 5. Test Reset clears all platforms, markers, and ghost candidates
             ctrl.ResetLevel();
-            int resetPlatCount = UnityEngine.Object.FindObjectsByType<ColorPlatform>().Length;
-            int resetMarkerCount = UnityEngine.Object.FindObjectsByType<LevelMarker>().Length;
+            int resetPlatCount = Contrast.Core.UnityCompat.FindAll<ColorPlatform>().Length;
+            int resetMarkerCount = Contrast.Core.UnityCompat.FindAll<LevelMarker>().Length;
             AssertTrue(ColorPlatform.All.Count == 0, "GhostTest_ResetRegistryEmpty", "ColorPlatform.All is empty after Reset");
             AssertTrue(resetPlatCount == 0, "GhostTest_ResetScenePlatformsEmpty", "Zero ColorPlatform GameObjects remain in scene after Reset");
             AssertTrue(resetMarkerCount == 0, "GhostTest_ResetSceneMarkersEmpty", "Zero LevelMarker GameObjects remain in scene after Reset");

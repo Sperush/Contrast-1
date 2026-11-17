@@ -318,7 +318,7 @@ namespace Contrast.Level
             // Camera boundary.
             // --------------------------------------------------
             CameraFollow camFollow =
-                FindAnyObjectByType<CameraFollow>();
+                Contrast.Core.UnityCompat.FindAny<CameraFollow>();
 
             if (camFollow != null && data.cameraBoundary != null)
             {
@@ -378,7 +378,7 @@ namespace Contrast.Level
             PlayerController player =
                 GameManager.Instance != null && GameManager.Instance.Player != null
                     ? GameManager.Instance.Player
-                    : FindAnyObjectByType<PlayerController>(FindObjectsInactive.Include);
+                    : Contrast.Core.UnityCompat.FindAny<PlayerController>(true);
 
             if (player != null)
             {
@@ -422,7 +422,7 @@ namespace Contrast.Level
             PlayerController player =
                 GameManager.Instance != null && GameManager.Instance.Player != null
                     ? GameManager.Instance.Player
-                    : FindAnyObjectByType<PlayerController>(FindObjectsInactive.Include);
+                    : Contrast.Core.UnityCompat.FindAny<PlayerController>(true);
 
             if (player == null)
                 return;
@@ -444,7 +444,7 @@ namespace Contrast.Level
                 CurrentSpawnColor);
 
             CameraFollow camFollow =
-                FindAnyObjectByType<CameraFollow>();
+                Contrast.Core.UnityCompat.FindAny<CameraFollow>();
 
             if (camFollow != null)
             {
@@ -697,14 +697,14 @@ namespace Contrast.Level
             }
 
             // Sweep scene for any orphaned ColorPlatform or LevelMarker
-            ColorPlatform[] strayPlatforms = FindObjectsByType<ColorPlatform>();
+            ColorPlatform[] strayPlatforms = Contrast.Core.UnityCompat.FindAll<ColorPlatform>();
             for (int i = 0; i < strayPlatforms.Length; i++)
             {
                 if (strayPlatforms[i] != null && strayPlatforms[i].gameObject != null)
                     SafeDestroy(strayPlatforms[i].gameObject);
             }
 
-            LevelMarker[] strayMarkers = FindObjectsByType<LevelMarker>();
+            LevelMarker[] strayMarkers = Contrast.Core.UnityCompat.FindAll<LevelMarker>();
             for (int i = 0; i < strayMarkers.Length; i++)
             {
                 if (strayMarkers[i] != null && strayMarkers[i].gameObject != null)

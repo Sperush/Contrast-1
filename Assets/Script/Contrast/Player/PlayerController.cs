@@ -228,10 +228,10 @@ namespace Contrast.Player
 
             deltaTime = Mathf.Max(0f, deltaTime);
 
-            inputReader ??= GetComponent<PlayerInput>();
-            jumpMotion ??= GetComponent<PlayerJumpMotion>();
-            movementResolver ??= GetComponent<PlayerMovementResolver>();
-            collisionResolver ??= GetComponent<PlayerCollisionResolver>();
+            if (inputReader == null) inputReader = GetComponent<PlayerInput>();
+            if (jumpMotion == null) jumpMotion = GetComponent<PlayerJumpMotion>();
+            if (movementResolver == null) movementResolver = GetComponent<PlayerMovementResolver>();
+            if (collisionResolver == null) collisionResolver = GetComponent<PlayerCollisionResolver>();
 
             if (!Config.Instance.enableTest && IsTestModeActive)
             {
@@ -515,23 +515,23 @@ namespace Contrast.Player
             LogicalColor next = currentColor;
             if (direction > 0)
             {
-                next = currentColor switch
+                switch (currentColor)
                 {
-                    LogicalColor.White => LogicalColor.Gray,
-                    LogicalColor.Gray => LogicalColor.Black,
-                    LogicalColor.Black => LogicalColor.White,
-                    _ => LogicalColor.White
-                };
+                    case LogicalColor.White: next = LogicalColor.Gray; break;
+                    case LogicalColor.Gray: next = LogicalColor.Black; break;
+                    case LogicalColor.Black: next = LogicalColor.White; break;
+                    default: next = LogicalColor.White; break;
+                }
             }
             else if (direction < 0)
             {
-                next = currentColor switch
+                switch (currentColor)
                 {
-                    LogicalColor.White => LogicalColor.Black,
-                    LogicalColor.Gray => LogicalColor.White,
-                    LogicalColor.Black => LogicalColor.Gray,
-                    _ => LogicalColor.White
-                };
+                    case LogicalColor.White: next = LogicalColor.Black; break;
+                    case LogicalColor.Gray: next = LogicalColor.White; break;
+                    case LogicalColor.Black: next = LogicalColor.Gray; break;
+                    default: next = LogicalColor.White; break;
+                }
             }
 
             SetColor(next);
@@ -602,13 +602,21 @@ namespace Contrast.Player
             currentColorValue = ColorClassifier.DefaultValue(color);
 
             // Synchronize phase with chosen color
-            currentPhase = color switch
+            switch (color)
             {
-                LogicalColor.White => 0f,
-                LogicalColor.Gray => Mathf.PI * 0.5f,
-                LogicalColor.Black => Mathf.PI,
-                _ => 0f
-            };
+                case LogicalColor.White:
+                    currentPhase = 0f;
+                    break;
+                case LogicalColor.Gray:
+                    currentPhase = Mathf.PI * 0.5f;
+                    break;
+                case LogicalColor.Black:
+                    currentPhase = Mathf.PI;
+                    break;
+                default:
+                    currentPhase = 0f;
+                    break;
+            }
 
             ApplyColorVisual();
 
@@ -665,7 +673,7 @@ namespace Contrast.Player
 
         public void ResetState()
         {
-            jumpMotion ??= GetComponent<PlayerJumpMotion>();
+            if (jumpMotion == null) jumpMotion = GetComponent<PlayerJumpMotion>();
             isGrounded = false;
             GroundedPlatform = null;
             riderDisplacement = Vector2.zero;
@@ -679,8 +687,8 @@ namespace Contrast.Player
 
         public void RefreshGroundedStateImmediate()
         {
-            collisionResolver ??= GetComponent<PlayerCollisionResolver>();
-            jumpMotion ??= GetComponent<PlayerJumpMotion>();
+            if (collisionResolver == null) collisionResolver = GetComponent<PlayerCollisionResolver>();
+            if (jumpMotion == null) jumpMotion = GetComponent<PlayerJumpMotion>();
             if (collisionResolver == null)
                 return;
 
@@ -705,7 +713,7 @@ namespace Contrast.Player
 
         public void StopMovement()
         {
-            jumpMotion ??= GetComponent<PlayerJumpMotion>();
+            if (jumpMotion == null) jumpMotion = GetComponent<PlayerJumpMotion>();
             isGrounded = false;
             GroundedPlatform = null;
             riderDisplacement = Vector2.zero;
@@ -735,7 +743,7 @@ namespace Contrast.Player
             jumpBufferTimer = 0f;
             coyoteTimer = 0f;
             LastMoveInputX = 0f;
-            jumpMotion ??= GetComponent<PlayerJumpMotion>();
+            if (jumpMotion == null) jumpMotion = GetComponent<PlayerJumpMotion>();
             jumpMotion?.ResetMotion();
             GetComponent<Contrast.Presentation.PlayerVisualPresentation>()?.SyncVisualsNow();
             Contrast.Audio.ContrastAudioManager.Instance?.PlayDeath();
