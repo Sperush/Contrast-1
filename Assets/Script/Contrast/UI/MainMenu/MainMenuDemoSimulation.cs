@@ -255,7 +255,7 @@ namespace Contrast.UI
 
         public void StepSimulation(float safeDt, out MainMenuUI.DemoBotInput lastBotInput, out string ruleText, out bool didResetVisualMarkers)
         {
-            ruleText = "Cùng màu → đi xuyên qua vật cản   ·   Khác màu → đứng vững trên bệ đỡ";
+            ruleText = "Cùng trạng thái giao thoa (cùng màu) → đi xuyên qua   ·   Khác trạng thái → đứng vững";
             lastBotInput = default;
             didResetVisualMarkers = false;
 
@@ -301,15 +301,15 @@ namespace Contrast.UI
         private MainMenuUI.DemoBotInput EvaluateBotInputForCurrentStage(out string ruleCaption, out bool didResetVisualMarkers)
         {
             MainMenuUI.DemoBotInput input = default;
-            ruleCaption = "Cùng màu → đi xuyên qua vật cản   ·   Khác màu → đứng vững trên bệ đỡ";
+            ruleCaption = "Cùng trạng thái giao thoa (cùng màu) → đi xuyên qua   ·   Khác trạng thái → đứng vững";
             didResetVisualMarkers = false;
 
             switch (BotStage)
             {
                 case MainMenuUI.DemoBotStage.RunInBlackToWall:
                     input.MoveAxisX = 1f;
-                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [D] DI CHUYỂN TỚI TƯỜNG TRẮNG";
-                    ruleCaption = "PHA ĐEN TIẾN ĐẾN TƯỜNG TRẮNG  ·  CHUẨN BỊ ĐỔI PHA MÀU ĐỂ ĐI XUYÊN QUA...";
+                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [D] CỰC TIỂU (MÀU ĐEN) TIẾN TỚI TƯỜNG";
+                    ruleCaption = "GIAO THOA CỰC TIỂU (MÀU ĐEN · NGƯỢC PHA Δφ=180°) TIẾN ĐẾN TƯỜNG CỰC ĐẠI (TRẮNG)...";
                     if (PlayerWorldPos.x >= -7.40f || StageTimer > 1.2f)
                     {
                         TransitionToDemoStage(MainMenuUI.DemoBotStage.ShiftWhitePassThroughWall);
@@ -324,8 +324,8 @@ namespace Contrast.UI
                         input.HasColorChange = true;
                         input.RequestedColor = LogicalColor.White;
                     }
-                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [←/→] PHA TRẮNG + [D] ĐI XUYÊN";
-                    ruleCaption = "ĐỔI SANG PHA TRẮNG (CÙNG MÀU TƯỜNG TRẮNG)  →  ĐI XUYÊN QUA VẬT CẢN!";
+                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [←/→] GIAO THOA CỰC ĐẠI (TRẮNG)";
+                    ruleCaption = "GIAO THOA CỰC ĐẠI (MÀU TRẮNG · CÙNG PHA Δφ=0°)  →  CÙNG MÀU NÊN ĐI XUYÊN QUA TƯỜNG TRẮNG!";
                     if (PlayerWorldPos.x >= -4.45f || StageTimer > 1.2f)
                     {
                         TransitionToDemoStage(MainMenuUI.DemoBotStage.JumpOntoGrayBridge);
@@ -339,8 +339,8 @@ namespace Contrast.UI
                         StageActionTriggered = true;
                         input.JumpPressed = true;
                     }
-                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [SPACE] NHẢY LÊN BỆ XÁM";
-                    ruleCaption = "KHÁC MÀU (TRẮNG ≠ XÁM)  →  NHẢY LÊN & ĐỨNG VỮNG TRÊN BỆ XÁM!";
+                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [SPACE] NHẢY LÊN BỆ TRUNG GIAN (XÁM)";
+                    ruleCaption = "KHÁC TRẠNG THÁI GIAO THOA (CỰC ĐẠI TRẮNG ≠ TRUNG GIAN XÁM)  →  ĐỨNG VỮNG TRÊN BỆ XÁM!";
                     if (StageActionTriggered && PlayerGrounded && PlayerWorldPos.x >= -0.25f)
                     {
                         PlayerWorldPos = new Vector2(-0.25f, PlayerWorldPos.y);
@@ -367,8 +367,8 @@ namespace Contrast.UI
                         input.HasColorChange = true;
                         input.RequestedColor = LogicalColor.Gray;
                     }
-                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [←/→] PHA XÁM (RƠI XUYÊN BỆ)";
-                    ruleCaption = "ĐỔI SANG PHA XÁM (CÙNG MÀU BỆ XÁM)  →  RƠI XUYÊN XUỐNG & THU QUANG ĐIỂM!";
+                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [←/→] GIAO THOA TRUNG GIAN (XÁM)";
+                    ruleCaption = "GIAO THOA TRUNG GIAN (MÀU XÁM · LỆCH PHA Δφ=90°)  →  RƠI XUYÊN BỆ XÁM & THU QUANG ĐIỂM!";
                     if (StageActionTriggered && PlayerGrounded && StageTimer >= 0.72f)
                     {
                         QuangDiemCollected = true;
@@ -401,8 +401,8 @@ namespace Contrast.UI
                         input.HasColorChange = true;
                         input.RequestedColor = LogicalColor.Black;
                     }
-                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [SPACE] NHẢY + [←/→] PHA ĐEN";
-                    ruleCaption = "ĐỔI SANG PHA ĐEN (KHÁC MÀU BỆ TRẮNG)  →  TIẾN RA BÊN VÂN TRÒN NEWTON!";
+                    input.KeyBadgeText = "MÁY TỰ CHƠI  ·  INPUT: [SPACE] NHẢY + [←/→] CỰC TIỂU (ĐEN)";
+                    ruleCaption = "GIAO THOA CỰC TIỂU (MÀU ĐEN · NGƯỢC PHA Δφ=180°)  →  ĐỨNG TRÊN BỆ TRẮNG & ĐO VÂN NEWTON!";
                     if (PlayerWorldPos.x >= 5.40f && PlayerGrounded && PlayerWorldPos.y > -3.0f)
                     {
                         PlayerWorldPos = new Vector2(5.40f, PlayerWorldPos.y);

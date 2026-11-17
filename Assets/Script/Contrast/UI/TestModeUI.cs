@@ -65,11 +65,7 @@ namespace Contrast.UI
             layout.childControlWidth = true;
             layout.childControlHeight = false;
 
-#if UNITY_2022_2_OR_NEWER
-            Font font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-#else
-            Font font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-#endif
+            Font font = Contrast.Core.UnityCompat.GetBuiltinFont();
             if (font == null)
             {
                 font = Font.CreateDynamicFontFromOSFont("Arial", 14);

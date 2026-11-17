@@ -1221,7 +1221,7 @@ namespace Contrast.Tests
 
             loader.BuildRuntimeLevel(authoredData);
 
-            int editSceneCount = UnityEngine.Object.FindObjectsOfType<ColorPlatform>().Length;
+            int editSceneCount = Contrast.Core.UnityCompat.FindAll<ColorPlatform>().Length;
             AssertTrue(ColorPlatform.All.Count == 2, "GhostTest_EditPlatformCount", "2 platforms registered in edit mode");
             AssertTrue(editSceneCount == 2, "GhostTest_EditSceneObjectCount", "Exactly 2 platform GameObjects in scene in edit mode");
 
@@ -1230,7 +1230,7 @@ namespace Contrast.Tests
             LevelData testPlayData = ctrl.BuildExportData();
             loader.BuildRuntimeLevel(testPlayData);
 
-            int testPlaySceneCount = UnityEngine.Object.FindObjectsOfType<ColorPlatform>().Length;
+            int testPlaySceneCount = Contrast.Core.UnityCompat.FindAll<ColorPlatform>().Length;
             AssertTrue(ColorPlatform.All.Count == 2, "GhostTest_TestPlayPlatformCount", "Exactly 2 platforms registered during Test Play");
             AssertTrue(testPlaySceneCount == 2, "GhostTest_NoGhostObjectsCreated", "No ghost or duplicate platform GameObjects exist in scene on Test Play start");
 
@@ -1246,13 +1246,13 @@ namespace Contrast.Tests
             AssertApproximately(12f, movingPlat.transform.position.x, 0.05f, "GhostTest_PlatformMoved", "Moving platform advanced along trajectory to x=12");
 
             // Verify scene objects count remains 2 (no ghosts at original x=10)
-            int movingSceneCount = UnityEngine.Object.FindObjectsOfType<ColorPlatform>().Length;
+            int movingSceneCount = Contrast.Core.UnityCompat.FindAll<ColorPlatform>().Length;
             AssertTrue(movingSceneCount == 2, "GhostTest_NoStationaryGhostAtOrigin", "Scene platform count strictly equals 2 during movement (no stationary ghosts at origin)");
 
             // 5. Test Reset clears all platforms, markers, and ghost candidates
             ctrl.ResetLevel();
-            int resetPlatCount = UnityEngine.Object.FindObjectsOfType<ColorPlatform>().Length;
-            int resetMarkerCount = UnityEngine.Object.FindObjectsOfType<LevelMarker>().Length;
+            int resetPlatCount = Contrast.Core.UnityCompat.FindAll<ColorPlatform>().Length;
+            int resetMarkerCount = Contrast.Core.UnityCompat.FindAll<LevelMarker>().Length;
             AssertTrue(ColorPlatform.All.Count == 0, "GhostTest_ResetRegistryEmpty", "ColorPlatform.All is empty after Reset");
             AssertTrue(resetPlatCount == 0, "GhostTest_ResetScenePlatformsEmpty", "Zero ColorPlatform GameObjects remain in scene after Reset");
             AssertTrue(resetMarkerCount == 0, "GhostTest_ResetSceneMarkersEmpty", "Zero LevelMarker GameObjects remain in scene after Reset");
@@ -3955,12 +3955,12 @@ namespace Contrast.Tests
             pvp.SyncVisualsNow();
 
             // F1_01: Loaded frames & Animator setup
-            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Idle") == 120,
-                "Anim_F1_01_IdleFrameCount120", "Idle clip has 120 frames");
-            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Run") == 32,
-                "Anim_F1_01_RunFrameCount32", "Run clip has 32 frames");
-            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Jump") == 61,
-                "Anim_F1_01_JumpFrameCount61", "Jump clip has 61 frames");
+            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Idle") == Contrast.Presentation.PlayerVisualPresentation.IdleFrameCount,
+                "Anim_F1_01_IdleFrameCount110", $"Idle clip has {Contrast.Presentation.PlayerVisualPresentation.IdleFrameCount} frames");
+            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Run") == Contrast.Presentation.PlayerVisualPresentation.RunFrameCount,
+                "Anim_F1_01_RunFrameCount28", $"Run clip has {Contrast.Presentation.PlayerVisualPresentation.RunFrameCount} frames");
+            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Jump") == Contrast.Presentation.PlayerVisualPresentation.JumpFrameCount,
+                "Anim_F1_01_JumpFrameCount61", $"Jump clip has {Contrast.Presentation.PlayerVisualPresentation.JumpFrameCount} frames");
             AssertTrue(pvp.CharacterAnimator != null && !pvp.CharacterAnimator.applyRootMotion,
                 "Anim_F1_02_RootMotionDisabled", "Animator component exists on visual root with applyRootMotion == false");
 
@@ -4044,6 +4044,24 @@ namespace Contrast.Tests
             pvp.AdvanceAnimation(0.25f);
             AssertTrue(pvp.CurrentAnimationState == Contrast.Presentation.PlayerAnimationState.Idle,
                 "Anim_F1_10_PostLandingReturnsToIdle", "After landing recovery, stationary player returns to Idle");
+
+            // Verify Config.Instance.enableTest (true vs false) gating PlayerController.SetTestMode and PlayerInput test shortcuts
+            bool prevEnableTest = Contrast.Core.Config.Instance.enableTest;
+            try
+            {
+                Contrast.Core.Config.Instance.enableTest = true;
+                pc.SetTestMode(true);
+                AssertTrue(pc.IsTestModeActive, "Config_EnableTestTrue_AllowsTestMode", "When Config.Instance.enableTest == true, SetTestMode(true) activates test mode");
+                pc.SetTestMode(false);
+
+                Contrast.Core.Config.Instance.enableTest = false;
+                pc.SetTestMode(true);
+                AssertTrue(!pc.IsTestModeActive, "Config_EnableTestFalse_BlocksTestMode", "When Config.Instance.enableTest == false, SetTestMode(true) is blocked");
+            }
+            finally
+            {
+                Contrast.Core.Config.Instance.enableTest = prevEnableTest;
+            }
 
             // F1_11: Death & Respawn animation state transitions
             pc.transform.position = new Vector3(0f, -30f, 0f);

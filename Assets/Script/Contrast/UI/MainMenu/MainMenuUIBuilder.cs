@@ -14,6 +14,10 @@ namespace Contrast.UI
         private static Sprite cachedRingSprite;
         private static Sprite cachedSkySprite;
         private static Sprite cachedIrisApertureSprite;
+        private static readonly Sprite[] cachedPhaseCardSprites = new Sprite[3];
+        private static readonly Sprite[] cachedPhaseSwatchSprites = new Sprite[3];
+        private static Sprite cachedChamferedTagSprite;
+        private static Sprite cachedDoubleSlashSprite;
 
         public static GameObject NewUI(string name, Transform parent)
         {
@@ -295,9 +299,11 @@ namespace Contrast.UI
                 TextAnchor.MiddleCenter);
         }
 
+        private static bool IsValid(Sprite s) => s != null && s.texture != null;
+
         public static Sprite GetSkyGradientSprite()
         {
-            if (cachedSkySprite != null)
+            if (IsValid(cachedSkySprite))
                 return cachedSkySprite;
 
             const int w = 64, h = 128;
@@ -331,12 +337,13 @@ namespace Contrast.UI
             }
             tex.Apply();
             cachedSkySprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+            cachedSkySprite.hideFlags = HideFlags.DontSave;
             return cachedSkySprite;
         }
 
         public static Sprite GetCircleSprite()
         {
-            if (cachedCircleSprite != null)
+            if (IsValid(cachedCircleSprite))
                 return cachedCircleSprite;
 
             const int d = 64;
@@ -359,12 +366,13 @@ namespace Contrast.UI
             }
             tex.Apply();
             cachedCircleSprite = Sprite.Create(tex, new Rect(0, 0, d, d), new Vector2(0.5f, 0.5f), 64f);
+            cachedCircleSprite.hideFlags = HideFlags.DontSave;
             return cachedCircleSprite;
         }
 
         public static Sprite GetRingSprite()
         {
-            if (cachedRingSprite != null)
+            if (IsValid(cachedRingSprite))
                 return cachedRingSprite;
 
             const int d = 96;
@@ -388,12 +396,13 @@ namespace Contrast.UI
             }
             tex.Apply();
             cachedRingSprite = Sprite.Create(tex, new Rect(0, 0, d, d), new Vector2(0.5f, 0.5f), 96f);
+            cachedRingSprite.hideFlags = HideFlags.DontSave;
             return cachedRingSprite;
         }
 
         public static Sprite GetIrisApertureSprite()
         {
-            if (cachedIrisApertureSprite != null)
+            if (IsValid(cachedIrisApertureSprite))
                 return cachedIrisApertureSprite;
 
             const int d = 192;
@@ -439,7 +448,246 @@ namespace Contrast.UI
 
             tex.Apply();
             cachedIrisApertureSprite = Sprite.Create(tex, new Rect(0, 0, d, d), new Vector2(0.5f, 0.5f), 100f);
+            cachedIrisApertureSprite.hideFlags = HideFlags.DontSave;
             return cachedIrisApertureSprite;
+        }
+
+        public static Sprite GetPhaseCardSprite(int phaseIndex)
+        {
+            int idx = Mathf.Clamp(phaseIndex, 0, 2);
+            if (IsValid(cachedPhaseCardSprites[idx]))
+                return cachedPhaseCardSprites[idx];
+
+            const int w = 160, h = 88;
+            const float radius = 14f;
+            const float borderThickness = 2.0f;
+
+            Color fillTop, fillBottom, borderCol, diagAccentCol;
+            if (idx == 0)
+            {
+                // Pha 1: Luminous Pearl-White card with bright ice-white rim
+                fillTop = new Color(0.95f, 0.975f, 1.00f, 0.98f);
+                fillBottom = new Color(0.86f, 0.91f, 0.97f, 0.98f);
+                borderCol = new Color(1.00f, 1.00f, 1.00f, 1.00f);
+                diagAccentCol = new Color(0.75f, 0.82f, 0.90f, 0.55f);
+            }
+            else if (idx == 1)
+            {
+                // Pha 2: Frosted Slate-Gray card with silver-white rim
+                fillTop = new Color(0.50f, 0.56f, 0.64f, 0.96f);
+                fillBottom = new Color(0.36f, 0.42f, 0.50f, 0.97f);
+                borderCol = new Color(0.84f, 0.90f, 0.96f, 0.88f);
+                diagAccentCol = new Color(0.66f, 0.73f, 0.82f, 0.36f);
+            }
+            else
+            {
+                // Pha 3: Deep Obsidian-Navy card with glowing electric-cyan rim
+                fillTop = new Color(0.055f, 0.105f, 0.180f, 0.98f);
+                fillBottom = new Color(0.024f, 0.045f, 0.085f, 0.99f);
+                borderCol = new Color(0.24f, 0.82f, 1.00f, 0.96f);
+                diagAccentCol = new Color(0.14f, 0.48f, 0.78f, 0.35f);
+            }
+
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontSave
+            };
+
+            Vector2 center = new Vector2(w * 0.5f, h * 0.5f);
+            Vector2 halfSize = new Vector2(w * 0.5f - 1.5f, h * 0.5f - 1.5f);
+
+            for (int y = 0; y < h; y++)
+            {
+                float tY = (float)y / (h - 1);
+                Color gradFill = Color.Lerp(fillBottom, fillTop, tY);
+
+                for (int x = 0; x < w; x++)
+                {
+                    Vector2 p = new Vector2(x + 0.5f, y + 0.5f) - center;
+                    Vector2 q = new Vector2(Mathf.Abs(p.x), Mathf.Abs(p.y)) - (halfSize - new Vector2(radius, radius));
+                    float dist = Vector2.Max(q, Vector2.zero).magnitude + Mathf.Min(Mathf.Max(q.x, q.y), 0f) - radius;
+
+                    float outerAlpha = Mathf.Clamp01(0.5f - dist);
+                    if (outerAlpha <= 0.001f)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                        continue;
+                    }
+
+                    Color bodyCol = gradFill;
+                    // Diagonal tech stripes in bottom-right corner matching reference image
+                    float diag = (x - (w - 34f)) - (y * 0.75f);
+                    if (y < 28 && ((diag > 0f && diag < 7f) || (diag > 12f && diag < 19f)))
+                    {
+                        bodyCol = Color.Lerp(bodyCol, diagAccentCol, diagAccentCol.a);
+                    }
+
+                    float innerBlend = Mathf.Clamp01(0.5f - (dist + borderThickness));
+                    Color px = Color.Lerp(borderCol, bodyCol, innerBlend);
+                    px.a *= outerAlpha;
+                    tex.SetPixel(x, y, px);
+                }
+            }
+
+            tex.Apply();
+            Sprite sp = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(20, 20, 20, 20));
+            sp.hideFlags = HideFlags.DontSave;
+            cachedPhaseCardSprites[idx] = sp;
+            return sp;
+        }
+
+        public static Sprite GetPhaseCircleSwatchSprite(int phaseIndex)
+        {
+            int idx = Mathf.Clamp(phaseIndex, 0, 2);
+            if (IsValid(cachedPhaseSwatchSprites[idx]))
+                return cachedPhaseSwatchSprites[idx];
+
+            const int d = 72;
+            const float center = d * 0.5f;
+            const float radius = d * 0.5f - 6f;
+
+            Color coreCol, rimCol, glowCol;
+            if (idx == 0)
+            {
+                coreCol = new Color(1.00f, 1.00f, 1.00f, 1.00f);
+                rimCol = new Color(1.00f, 1.00f, 1.00f, 1.00f);
+                glowCol = new Color(0.75f, 0.88f, 1.00f, 0.45f);
+            }
+            else if (idx == 1)
+            {
+                coreCol = new Color(0.58f, 0.64f, 0.72f, 1.00f);
+                rimCol = new Color(0.95f, 0.98f, 1.00f, 0.96f);
+                glowCol = new Color(0.85f, 0.92f, 1.00f, 0.28f);
+            }
+            else
+            {
+                coreCol = new Color(0.015f, 0.025f, 0.045f, 1.00f);
+                rimCol = new Color(0.32f, 0.86f, 1.00f, 0.98f);
+                glowCol = new Color(0.20f, 0.75f, 1.00f, 0.42f);
+            }
+
+            Texture2D tex = new Texture2D(d, d, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontSave
+            };
+
+            for (int y = 0; y < d; y++)
+            {
+                for (int x = 0; x < d; x++)
+                {
+                    float dist = Vector2.Distance(new Vector2(x + 0.5f, y + 0.5f), new Vector2(center, center)) - radius;
+                    if (dist <= -2.2f)
+                    {
+                        tex.SetPixel(x, y, coreCol);
+                    }
+                    else if (dist <= 0.5f)
+                    {
+                        float t = Mathf.Clamp01((dist + 2.2f) / 2.2f);
+                        float edgeA = Mathf.Clamp01(0.5f - dist);
+                        Color c = Color.Lerp(coreCol, rimCol, t);
+                        c.a *= edgeA;
+                        tex.SetPixel(x, y, c);
+                    }
+                    else if (dist <= 5.5f)
+                    {
+                        float g = Mathf.Clamp01(1f - (dist - 0.5f) / 5.0f);
+                        tex.SetPixel(x, y, new Color(glowCol.r, glowCol.g, glowCol.b, glowCol.a * g * g));
+                    }
+                    else
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                }
+            }
+
+            tex.Apply();
+            Sprite sp = Sprite.Create(tex, new Rect(0, 0, d, d), new Vector2(0.5f, 0.5f), 100f);
+            sp.hideFlags = HideFlags.DontSave;
+            cachedPhaseSwatchSprites[idx] = sp;
+            return sp;
+        }
+
+        public static Sprite GetChamferedTagSprite()
+        {
+            if (IsValid(cachedChamferedTagSprite))
+                return cachedChamferedTagSprite;
+
+            const int w = 96, h = 28;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontSave
+            };
+
+            for (int y = 0; y < h; y++)
+            {
+                float ny = Mathf.Abs((y + 0.5f) - h * 0.5f); // 0 at center, 14 at top/bottom
+                for (int x = 0; x < w; x++)
+                {
+                    float leftBoundary = 1f + ny * 0.55f;
+                    float rightBoundary = (w - 1f) - ny * 0.55f;
+                    float dEdge = Mathf.Min((x + 0.5f) - leftBoundary, rightBoundary - (x + 0.5f));
+                    dEdge = Mathf.Min(dEdge, (h * 0.5f - 1f) - ny);
+
+                    float alpha = Mathf.Clamp01(dEdge + 0.5f);
+                    if (alpha <= 0.001f)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                    }
+                    else
+                    {
+                        bool isRim = dEdge < 1.3f;
+                        Color c = isRim ? new Color(1f, 1f, 1f, alpha) : new Color(0.78f, 0.84f, 0.92f, alpha);
+                        tex.SetPixel(x, y, c);
+                    }
+                }
+            }
+
+            tex.Apply();
+            cachedChamferedTagSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(12, 4, 12, 4));
+            cachedChamferedTagSprite.hideFlags = HideFlags.DontSave;
+            return cachedChamferedTagSprite;
+        }
+
+        public static Sprite GetDoubleSlashTicksSprite()
+        {
+            if (IsValid(cachedDoubleSlashSprite))
+                return cachedDoubleSlashSprite;
+
+            const int w = 36, h = 20;
+            Texture2D tex = new Texture2D(w, h, TextureFormat.RGBA32, false)
+            {
+                filterMode = FilterMode.Bilinear,
+                wrapMode = TextureWrapMode.Clamp,
+                hideFlags = HideFlags.DontSave
+            };
+
+            for (int y = 0; y < h; y++)
+            {
+                float slant = (y - 2f) * 0.48f;
+                for (int x = 0; x < w; x++)
+                {
+                    if (y < 2 || y >= h - 2)
+                    {
+                        tex.SetPixel(x, y, Color.clear);
+                        continue;
+                    }
+                    float d1 = Mathf.Min((x + 0.5f) - (4f + slant), (12f + slant) - (x + 0.5f));
+                    float d2 = Mathf.Min((x + 0.5f) - (16f + slant), (24f + slant) - (x + 0.5f));
+                    float a = Mathf.Clamp01(Mathf.Max(d1, d2) + 0.5f);
+                    tex.SetPixel(x, y, new Color(1f, 1f, 1f, a));
+                }
+            }
+
+            tex.Apply();
+            cachedDoubleSlashSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 100f);
+            cachedDoubleSlashSprite.hideFlags = HideFlags.DontSave;
+            return cachedDoubleSlashSprite;
         }
     }
 }

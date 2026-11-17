@@ -195,7 +195,14 @@ namespace Contrast.Telemetry
         {
             GameManager gm = GameManager.Instance;
             if (gm == null)
+            {
+                if (hasActiveLevel && !levelClosed)
+                {
+                    OnGameStateChanged(prevGameState, GameState.MainMenu);
+                    prevGameState = GameState.MainMenu;
+                }
                 return;
+            }
 
             PlayerController pc = gm.Player;
             LevelLoader loader = gm.LevelLoader;

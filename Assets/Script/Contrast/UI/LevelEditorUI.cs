@@ -230,7 +230,7 @@ namespace Contrast.UI
 
         private void BuildUI()
         {
-            controller = FindObjectOfType<LevelEditorController>();
+            controller = Contrast.Core.UnityCompat.FindAny<LevelEditorController>();
             EnsureEventSystem();
 
             GameObject canvasGo = NewUI("Canvas", transform);
@@ -1550,7 +1550,7 @@ namespace Contrast.UI
             if (suppressFields || selectedPlatform == null)
                 return;
 
-            if (controller == null) controller = Contrast.Core.GameManager.FindObjectIncludingInactive<LevelEditorController>();
+            if (controller == null) controller = Contrast.Core.UnityCompat.FindAny<LevelEditorController>(true);
             if (controller == null)
                 return;
 
@@ -1602,7 +1602,7 @@ namespace Contrast.UI
         private static Font GetFont()
         {
 #if UNITY_2022_2_OR_NEWER
-            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return Contrast.Core.UnityCompat.GetBuiltinFont();
 #else
             return Resources.GetBuiltinResource<Font>("Arial.ttf");
 #endif
@@ -1610,7 +1610,7 @@ namespace Contrast.UI
 
         private static void EnsureEventSystem()
         {
-            if (FindObjectOfType<EventSystem>() != null)
+            if (Contrast.Core.UnityCompat.FindAny<EventSystem>() != null)
                 return;
             GameObject go = new GameObject("EventSystem");
             go.AddComponent<EventSystem>();

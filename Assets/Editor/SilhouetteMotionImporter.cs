@@ -43,7 +43,7 @@ namespace Contrast.Editor
             if (!Directory.Exists(sheetsDir))
                 return;
 
-            foreach (string mode in new[] { "Idle", "Run", "Jump", "Celebrate" })
+            foreach (string mode in new[] { "Idle", "Run", "Jump", "Celebrate", "PointMark" })
             {
                 string texPath = $"{sheetsDir}/{mode}.png";
                 var ti = AssetImporter.GetAtPath(texPath) as TextureImporter;
@@ -63,28 +63,28 @@ namespace Contrast.Editor
                 }
             }
 
-            GetOrCreateClip($"{rootDir}/Celebrate.anim", 0.64f, 32, true);
+            AnimationClip celebrateClip = GetOrCreateClip($"{rootDir}/Celebrate.anim", 0.64f, 32, true);
 
             string controllerPath = $"{rootDir}/SilhouettePlayerAnimator.controller";
-            AnimatorController existing = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
-            if (existing != null &&
-                existing.layers != null &&
-                existing.layers.Length > 0 &&
-                existing.layers[0].stateMachine != null &&
-                existing.layers[0].stateMachine.states != null &&
-                existing.layers[0].stateMachine.states.Length >= 6)
+            AnimatorController existingCtrl = AssetDatabase.LoadAssetAtPath<AnimatorController>(controllerPath);
+            if (existingCtrl != null &&
+                existingCtrl.layers != null &&
+                existingCtrl.layers.Length > 0 &&
+                existingCtrl.layers[0].stateMachine != null &&
+                existingCtrl.layers[0].stateMachine.states != null &&
+                existingCtrl.layers[0].stateMachine.states.Length >= 7)
             {
                 return;
             }
 
-            if (existing != null)
+            if (existingCtrl != null)
             {
                 AssetDatabase.DeleteAsset(controllerPath);
             }
 
-            AnimationClip idleClip = GetOrCreateClip($"{rootDir}/Idle.anim", 2.40f, 120, true);
-            AnimationClip runClip = GetOrCreateClip($"{rootDir}/Run.anim", 0.64f, 32, true);
-            AnimationClip jumpClip = GetOrCreateClip($"{rootDir}/Jump.anim", 1.22f, 61, false);
+            AnimationClip idleClip = GetOrCreateClip($"{rootDir}/Idle.anim", 2.20f, 110, true);
+            AnimationClip runClip = GetOrCreateClip($"{rootDir}/Run.anim", 0.56f, 28, true);
+            AnimationClip jumpClip = GetOrCreateClip($"{rootDir}/Jump.anim", 1.21f, 61, false);
 
             AnimatorController controller = AnimatorController.CreateAnimatorControllerAtPath(controllerPath);
             controller.AddParameter("State", AnimatorControllerParameterType.Int);
@@ -113,12 +113,16 @@ namespace Contrast.Editor
             AnimatorState deathState = sm.AddState("Death");
             deathState.motion = jumpClip;
 
+            AnimatorState celebrateState = sm.AddState("Celebrate");
+            celebrateState.motion = celebrateClip;
+
             AddAnyTransition(sm, idleState, 0);
             AddAnyTransition(sm, runState, 1);
             AddAnyTransition(sm, jumpState, 2);
             AddAnyTransition(sm, fallState, 3);
             AddAnyTransition(sm, landState, 4);
             AddAnyTransition(sm, deathState, 5);
+            AddAnyTransition(sm, celebrateState, 6);
 
             EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();

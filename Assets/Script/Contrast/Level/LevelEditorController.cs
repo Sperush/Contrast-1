@@ -100,8 +100,8 @@ namespace Contrast.Level
 
         private void Awake()
         {
-            if (levelLoader == null) levelLoader = FindObjectOfType<LevelLoader>();
-            if (ui == null) ui = Contrast.Core.GameManager.FindObjectIncludingInactive<LevelEditorUI>();
+            if (levelLoader == null) levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>();
+            if (ui == null) ui = Contrast.Core.UnityCompat.FindAny<LevelEditorUI>(true);
             ui?.SetController(this);
             if (trajectoryController == null) trajectoryController = new TrajectoryEditController(handleSize, handleHitRadius);
         }
@@ -187,7 +187,7 @@ namespace Contrast.Level
             if (picker == null && GameManager.Instance != null)
                 picker = GameManager.Instance.LevelSelectUI;
             if (picker == null)
-                picker = Contrast.Core.GameManager.FindObjectIncludingInactive<LevelSelectUI>();
+                picker = Contrast.Core.UnityCompat.FindAny<LevelSelectUI>(true);
             if (picker == null)
             {
                 GameObject pickerGo = new GameObject("LevelSelectUI");
@@ -903,7 +903,7 @@ namespace Contrast.Level
             // 3. Fallback: Saved camera boundary from CameraFollow or working copy
             if (!hasPoint)
             {
-                CameraFollow camFollow = FindObjectOfType<CameraFollow>();
+                CameraFollow camFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>();
                 if (camFollow != null && camFollow.HasBoundary)
                 {
                     IncludeAabb(camFollow.BoundaryCenter, camFollow.BoundarySize);
@@ -1163,7 +1163,7 @@ namespace Contrast.Level
                 data.checkPoint = null;
 
             // Camera boundary
-            CameraFollow camFollow = FindObjectOfType<CameraFollow>();
+            CameraFollow camFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>();
             if (camFollow != null && camFollow.HasBoundary)
             {
                 data.cameraBoundary = new CameraBoundaryData
@@ -1584,14 +1584,14 @@ namespace Contrast.Level
             LevelMarker.ClearRegistry();
 
             // Sweep any stray or orphaned platforms / markers in the scene
-            ColorPlatform[] strayPlatforms = FindObjectsOfType<ColorPlatform>();
+            ColorPlatform[] strayPlatforms = Contrast.Core.UnityCompat.FindAll<ColorPlatform>();
             for (int i = 0; i < strayPlatforms.Length; i++)
             {
                 if (strayPlatforms[i] != null && strayPlatforms[i].gameObject != null)
                     SafeDestroy(strayPlatforms[i].gameObject);
             }
 
-            LevelMarker[] strayMarkers = FindObjectsOfType<LevelMarker>();
+            LevelMarker[] strayMarkers = Contrast.Core.UnityCompat.FindAll<LevelMarker>();
             for (int i = 0; i < strayMarkers.Length; i++)
             {
                 if (strayMarkers[i] != null && strayMarkers[i].gameObject != null)
@@ -1656,7 +1656,7 @@ namespace Contrast.Level
         private Transform FindOrCreatePlatformRoot()
         {
             if (levelLoader == null)
-                levelLoader = FindObjectOfType<LevelLoader>();
+                levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>();
 
             if (levelLoader != null)
                 return levelLoader.PlatformsRoot;
@@ -1671,7 +1671,7 @@ namespace Contrast.Level
         private Transform FindOrCreateEditorRoot()
         {
             if (levelLoader == null)
-                levelLoader = FindObjectOfType<LevelLoader>();
+                levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>();
 
             if (levelLoader != null)
                 return levelLoader.LevelObjectsRoot;
@@ -1685,8 +1685,8 @@ namespace Contrast.Level
 
         private void EnsureDependencies()
         {
-            if (levelLoader == null) levelLoader = FindObjectOfType<LevelLoader>();
-            if (ui == null) ui = Contrast.Core.GameManager.FindObjectIncludingInactive<LevelEditorUI>();
+            if (levelLoader == null) levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>();
+            if (ui == null) ui = Contrast.Core.UnityCompat.FindAny<LevelEditorUI>(true);
             ui?.SetController(this);
         }
 

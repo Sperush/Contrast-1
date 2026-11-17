@@ -72,8 +72,12 @@ namespace Contrast.UI
 
         private RectTransform demoPhaseThumbRt;
         private Image demoPhaseThumbImg;
+        private RectTransform demoSegWhiteRt;
+        private RectTransform demoSegGrayRt;
+        private RectTransform demoSegBlackRt;
         private Text demoPhaseBadgeText;
         private Image demoPhaseBadgeBg;
+        private Image demoPhaseBadgeSwatchImg;
         private Text demoRuleCaptionText;
         private Text demoBotInputBadgeText;
 
@@ -105,10 +109,10 @@ namespace Contrast.UI
             MainMenuUIBuilder.CreateSubLabel(
                 stageCard.transform,
                 "ShowcaseTitle",
-                "Mô phỏng trực quan cơ chế đổi pha màu",
-                new Vector2(-120f, 324f),
-                new Vector2(540f, 32f),
-                17,
+                "Mô phỏng cơ chế giao thoa sóng (Cực đại · Trung gian · Cực tiểu)",
+                new Vector2(-148f, 324f),
+                new Vector2(500f, 32f),
+                16,
                 FontStyle.Bold,
                 LabStyleUI.TextPrimary,
                 TextAnchor.MiddleLeft);
@@ -117,32 +121,24 @@ namespace Contrast.UI
             demoPhaseBadgeBg = phaseBadge.AddComponent<Image>();
             LabStyleUI.ApplySlicedSprite(demoPhaseBadgeBg, LabStyleUI.GetPillSprite(), false);
             RectTransform pbRt = phaseBadge.GetComponent<RectTransform>();
-            pbRt.sizeDelta = new Vector2(216f, 38f);
-            pbRt.anchoredPosition = new Vector2(286f, 324f);
+            pbRt.sizeDelta = new Vector2(284f, 38f);
+            pbRt.anchoredPosition = new Vector2(256f, 324f);
 
-            GameObject pbTxtGo = MainMenuUIBuilder.NewUI("BadgeLabel", phaseBadge.transform);
-            demoPhaseBadgeText = pbTxtGo.AddComponent<Text>();
-            demoPhaseBadgeText.font = MainMenuUIBuilder.GetFont();
-            demoPhaseBadgeText.text = "Pha hiện tại: Đen";
-            demoPhaseBadgeText.fontSize = 13;
-            demoPhaseBadgeText.fontStyle = FontStyle.Bold;
-            demoPhaseBadgeText.alignment = TextAnchor.MiddleCenter;
-            demoPhaseBadgeText.color = Color.white;
-            MainMenuUIBuilder.Stretch(pbTxtGo.GetComponent<RectTransform>());
+            EnsurePhaseBadgeSwatchAndLabel(phaseBadge.transform);
 
             GameObject vpBezel = MainMenuUIBuilder.NewUI("ViewportBezel", stageCard.transform);
             Image bezelImg = vpBezel.AddComponent<Image>();
             LabStyleUI.ApplySlicedSprite(bezelImg, LabStyleUI.GetRecessedSlotSprite(), false);
             RectTransform bzRt = vpBezel.GetComponent<RectTransform>();
             bzRt.sizeDelta = new Vector2(804f, 466f);
-            bzRt.anchoredPosition = new Vector2(0f, 60f);
+            bzRt.anchoredPosition = new Vector2(0f, 74f);
 
             GameObject viewport = MainMenuUIBuilder.NewUI("DemoViewport", stageCard.transform);
             Image vpBg = viewport.AddComponent<Image>();
             vpBg.color = new Color(0.055f, 0.085f, 0.135f, 0.96f);
             RectTransform vpRt = viewport.GetComponent<RectTransform>();
             vpRt.sizeDelta = new Vector2(MainMenuUI.DemoViewportWidthPx, MainMenuUI.DemoViewportHeightPx);
-            vpRt.anchoredPosition = new Vector2(0f, 60f);
+            vpRt.anchoredPosition = new Vector2(0f, 74f);
             viewport.AddComponent<RectMask2D>();
 
             for (int gx = -480; gx <= 480; gx += 120)
@@ -174,28 +170,7 @@ namespace Contrast.UI
             BuildDemoCollectibleFromLevelData(viewport.transform, demoLevelData);
             BuildDemoNewtonApparatusFromLevelData(viewport.transform, demoLevelData);
             BuildDemoCharacter(viewport.transform);
-
-            GameObject botPill = MainMenuUIBuilder.NewUI("DemoBotInputBadge", viewport.transform);
-            Image botPillBg = botPill.AddComponent<Image>();
-            LabStyleUI.ApplySlicedSprite(botPillBg, LabStyleUI.GetRecessedSlotSprite(), false);
-            botPillBg.color = new Color(0.08f, 0.14f, 0.22f, 0.88f);
-            botPillBg.raycastTarget = false;
-            RectTransform bpRt = botPill.GetComponent<RectTransform>();
-            bpRt.anchorMin = new Vector2(0f, 1f);
-            bpRt.anchorMax = new Vector2(0f, 1f);
-            bpRt.pivot = new Vector2(0f, 1f);
-            bpRt.anchoredPosition = new Vector2(14f, -12f);
-            bpRt.sizeDelta = new Vector2(310f, 28f);
-
-            GameObject bpTxtGo = MainMenuUIBuilder.NewUI("BotInputText", botPill.transform);
-            demoBotInputBadgeText = bpTxtGo.AddComponent<Text>();
-            demoBotInputBadgeText.font = MainMenuUIBuilder.GetFont();
-            demoBotInputBadgeText.text = "MÁY TỰ CHƠI  ·  INPUT: [D] DI CHUYỂN";
-            demoBotInputBadgeText.fontSize = 11;
-            demoBotInputBadgeText.fontStyle = FontStyle.Bold;
-            demoBotInputBadgeText.alignment = TextAnchor.MiddleCenter;
-            demoBotInputBadgeText.color = new Color(0.68f, 0.92f, 1f, 0.96f);
-            MainMenuUIBuilder.Stretch(bpTxtGo.GetComponent<RectTransform>());
+            demoBotInputBadgeText = null;
 
             BuildDemoCircularIrisOverlay(viewport.transform);
 
@@ -203,14 +178,14 @@ namespace Contrast.UI
             Image ruleBg = ruleBox.AddComponent<Image>();
             LabStyleUI.ApplySlicedSprite(ruleBg, LabStyleUI.GetPillSprite(), true, -4f);
             RectTransform ruleRt = ruleBox.GetComponent<RectTransform>();
-            ruleRt.sizeDelta = new Vector2(796f, 52f);
-            ruleRt.anchoredPosition = new Vector2(0f, -210f);
+            ruleRt.sizeDelta = new Vector2(796f, 34f);
+            ruleRt.anchoredPosition = new Vector2(0f, -182f);
 
             GameObject ruleTxtGo = MainMenuUIBuilder.NewUI("RuleText", ruleBox.transform);
             demoRuleCaptionText = ruleTxtGo.AddComponent<Text>();
             demoRuleCaptionText.font = MainMenuUIBuilder.GetFont();
-            demoRuleCaptionText.text = "Cùng màu → đi xuyên qua vật cản   ·   Khác màu → đứng vững trên bệ đỡ";
-            demoRuleCaptionText.fontSize = 14;
+            demoRuleCaptionText.text = "Cùng trạng thái giao thoa (cùng màu) → đi xuyên qua   ·   Khác trạng thái → đứng vững";
+            demoRuleCaptionText.fontSize = 13;
             demoRuleCaptionText.fontStyle = FontStyle.Bold;
             demoRuleCaptionText.alignment = TextAnchor.MiddleCenter;
             demoRuleCaptionText.color = LabStyleUI.TextPrimary;
@@ -227,6 +202,432 @@ namespace Contrast.UI
             if (resetVisuals)
                 ResetVisualMarkers();
             ApplyDemoCameraToWorldTransforms(TotalTime);
+        }
+
+        public bool BindExisting(Transform parent)
+        {
+            Transform stageCard = parent.Find("GameplayShowcaseCard");
+            if (stageCard == null)
+                return false;
+
+            Transform viewport = stageCard.Find("DemoViewport");
+            if (viewport == null)
+                return false;
+
+            Image stageBg = stageCard.GetComponent<Image>();
+            if (stageBg != null)
+                LabStyleUI.ApplySlicedSprite(stageBg, LabStyleUI.GetCardSprite(), false);
+
+            Transform vpBezel = stageCard.Find("ViewportBezel");
+            if (vpBezel != null)
+            {
+                Image bzImg = vpBezel.GetComponent<Image>();
+                if (bzImg != null)
+                    LabStyleUI.ApplySlicedSprite(bzImg, LabStyleUI.GetRecessedSlotSprite(), false);
+                RectTransform bzRt = vpBezel.GetComponent<RectTransform>();
+                if (bzRt != null && Mathf.Abs(bzRt.anchoredPosition.y - 60f) < 2f)
+                    bzRt.anchoredPosition = new Vector2(bzRt.anchoredPosition.x, 74f);
+            }
+
+            RectTransform vpExistRt = viewport.GetComponent<RectTransform>();
+            if (vpExistRt != null && Mathf.Abs(vpExistRt.anchoredPosition.y - 60f) < 2f)
+                vpExistRt.anchoredPosition = new Vector2(vpExistRt.anchoredPosition.x, 74f);
+
+            Transform showcaseTitleTr = stageCard.Find("ShowcaseTitle");
+            if (showcaseTitleTr != null)
+            {
+                Text stTxt = showcaseTitleTr.GetComponent<Text>();
+                if (stTxt != null && stTxt.text == "Mô phỏng trực quan cơ chế đổi pha màu")
+                    stTxt.text = "Mô phỏng cơ chế giao thoa sóng (Cực đại · Trung gian · Cực tiểu)";
+            }
+
+            Transform phaseBadge = stageCard.Find("LivePhaseBadge");
+            if (phaseBadge != null)
+            {
+                demoPhaseBadgeBg = phaseBadge.GetComponent<Image>();
+                if (demoPhaseBadgeBg != null)
+                    LabStyleUI.ApplySlicedSprite(demoPhaseBadgeBg, LabStyleUI.GetPillSprite(), false);
+                RectTransform pbRt = phaseBadge.GetComponent<RectTransform>();
+                if (pbRt != null && pbRt.sizeDelta.x < 260f)
+                {
+                    pbRt.sizeDelta = new Vector2(284f, 38f);
+                    pbRt.anchoredPosition = new Vector2(256f, pbRt.anchoredPosition.y);
+                }
+                EnsurePhaseBadgeSwatchAndLabel(phaseBadge);
+            }
+
+            Transform ruleBox = stageCard.Find("LiveRuleBox");
+            if (ruleBox != null)
+            {
+                Image ruleBg = ruleBox.GetComponent<Image>();
+                if (ruleBg != null)
+                    LabStyleUI.ApplySlicedSprite(ruleBg, LabStyleUI.GetPillSprite(), false);
+                RectTransform ruleRt = ruleBox.GetComponent<RectTransform>();
+                if (ruleRt != null && Mathf.Abs(ruleRt.anchoredPosition.y - (-210f)) < 4f)
+                {
+                    ruleRt.sizeDelta = new Vector2(796f, 34f);
+                    ruleRt.anchoredPosition = new Vector2(ruleRt.anchoredPosition.x, -182f);
+                }
+                Transform rTxt = ruleBox.Find("RuleText");
+                if (rTxt != null)
+                {
+                    demoRuleCaptionText = rTxt.GetComponent<Text>();
+                    if (demoRuleCaptionText != null)
+                        demoRuleCaptionText.fontSize = 13;
+                }
+            }
+
+            Transform barWrap = stageCard.Find("DemoPhaseBarWrap");
+            if (barWrap != null)
+            {
+                UpgradeOrBindDemoPhaseBar(barWrap);
+            }
+
+            // Rebuild dynamic viewport internals cleanly inside the existing DemoViewport
+            for (int i = viewport.childCount - 1; i >= 0; i--)
+            {
+                GameObject childGo = viewport.GetChild(i).gameObject;
+                if (Application.isPlaying)
+                    UnityEngine.Object.Destroy(childGo);
+                else
+                    UnityEngine.Object.DestroyImmediate(childGo);
+            }
+
+            Simulation.Platforms.Clear();
+            demoNewtonRingImgs.Clear();
+            demoNewtonRingRts.Clear();
+            demoGridVLines.Clear();
+            demoGridVBaseX.Clear();
+            demoGridHLines.Clear();
+            demoGridHBaseY.Clear();
+
+            Simulation.InitializeLevelData();
+            LevelData demoLevelData = Simulation.LevelData;
+
+            for (int gx = -480; gx <= 480; gx += 120)
+            {
+                GameObject vLine = MainMenuUIBuilder.NewUI("GridV_" + gx, viewport);
+                Image vlImg = vLine.AddComponent<Image>();
+                vlImg.color = new Color(0.55f, 0.75f, 0.95f, 0.06f);
+                vlImg.raycastTarget = false;
+                RectTransform vlRt = vLine.GetComponent<RectTransform>();
+                vlRt.sizeDelta = new Vector2(1f, MainMenuUI.DemoViewportHeightPx);
+                vlRt.anchoredPosition = new Vector2(gx, 0f);
+                demoGridVLines.Add(vlRt);
+                demoGridVBaseX.Add(gx);
+            }
+            for (int gy = -240; gy <= 240; gy += 80)
+            {
+                GameObject hLine = MainMenuUIBuilder.NewUI("GridH_" + gy, viewport);
+                Image hlImg = hLine.AddComponent<Image>();
+                hlImg.color = new Color(0.55f, 0.75f, 0.95f, 0.06f);
+                hlImg.raycastTarget = false;
+                RectTransform hlRt = hLine.GetComponent<RectTransform>();
+                hlRt.sizeDelta = new Vector2(MainMenuUI.DemoViewportWidthPx, 1f);
+                hlRt.anchoredPosition = new Vector2(0f, gy);
+                demoGridHLines.Add(hlRt);
+                demoGridHBaseY.Add(gy);
+            }
+
+            BuildDemoPlatformsFromLevelData(viewport, demoLevelData);
+            BuildDemoCollectibleFromLevelData(viewport, demoLevelData);
+            BuildDemoNewtonApparatusFromLevelData(viewport, demoLevelData);
+            BuildDemoCharacter(viewport);
+            demoBotInputBadgeText = null;
+
+            BuildDemoCircularIrisOverlay(viewport);
+            ResetDemoMiniGame();
+            return true;
+        }
+
+        private void EnsurePhaseBadgeSwatchAndLabel(Transform phaseBadge)
+        {
+            Transform swatchTr = phaseBadge.Find("PhaseColorIcon");
+            if (swatchTr == null)
+            {
+                GameObject swGo = MainMenuUIBuilder.NewUI("PhaseColorIcon", phaseBadge);
+                swatchTr = swGo.transform;
+                demoPhaseBadgeSwatchImg = swGo.AddComponent<Image>();
+                Outline swOut = swGo.AddComponent<Outline>();
+                swOut.effectColor = new Color(0.75f, 0.90f, 1f, 0.85f);
+                swOut.effectDistance = new Vector2(1.2f, -1.2f);
+            }
+            else
+            {
+                demoPhaseBadgeSwatchImg = swatchTr.GetComponent<Image>();
+            }
+
+            if (demoPhaseBadgeSwatchImg != null)
+            {
+                demoPhaseBadgeSwatchImg.sprite = LabStyleUI.GetSoftCircleSprite();
+                demoPhaseBadgeSwatchImg.color = new Color(0.08f, 0.11f, 0.17f, 1f);
+                demoPhaseBadgeSwatchImg.raycastTarget = false;
+                RectTransform swRt = demoPhaseBadgeSwatchImg.GetComponent<RectTransform>();
+                swRt.anchorMin = new Vector2(0f, 0.5f);
+                swRt.anchorMax = new Vector2(0f, 0.5f);
+                swRt.pivot = new Vector2(0.5f, 0.5f);
+                swRt.anchoredPosition = new Vector2(20f, 0f);
+                swRt.sizeDelta = new Vector2(18f, 18f);
+            }
+
+            Transform lblTr = phaseBadge.Find("BadgeLabel");
+            if (lblTr == null)
+            {
+                GameObject pbTxtGo = MainMenuUIBuilder.NewUI("BadgeLabel", phaseBadge);
+                lblTr = pbTxtGo.transform;
+                demoPhaseBadgeText = pbTxtGo.AddComponent<Text>();
+            }
+            else
+            {
+                demoPhaseBadgeText = lblTr.GetComponent<Text>();
+            }
+
+            if (demoPhaseBadgeText != null)
+            {
+                demoPhaseBadgeText.font = MainMenuUIBuilder.GetFont();
+                demoPhaseBadgeText.text = "Giao thoa cực tiểu · Đen (Δφ=180°)";
+                demoPhaseBadgeText.fontSize = 12;
+                demoPhaseBadgeText.fontStyle = FontStyle.Bold;
+                demoPhaseBadgeText.alignment = TextAnchor.MiddleLeft;
+                demoPhaseBadgeText.color = Color.white;
+                RectTransform lblRt = demoPhaseBadgeText.GetComponent<RectTransform>();
+                lblRt.anchorMin = Vector2.zero;
+                lblRt.anchorMax = Vector2.one;
+                lblRt.offsetMin = new Vector2(36f, 0f);
+                lblRt.offsetMax = new Vector2(-10f, 0f);
+            }
+        }
+
+        private void UpgradeOrBindDemoPhaseBar(Transform barWrap)
+        {
+            RectTransform bwRt = barWrap.GetComponent<RectTransform>();
+            if (bwRt != null)
+            {
+                bwRt.sizeDelta = new Vector2(796f, 146f);
+                bwRt.anchoredPosition = new Vector2(0f, -278f);
+            }
+
+            // Hide legacy QuickControlsTag & RuleSummaryFooter so the 3 cards span cleanly across the full width
+            Transform quickTag = barWrap.Find("QuickControlsTag");
+            if (quickTag != null)
+                quickTag.gameObject.SetActive(false);
+
+            Transform footer = barWrap.Find("RuleSummaryFooter");
+            if (footer != null)
+                footer.gameObject.SetActive(false);
+
+            EnsureThreePhaseHeaderBanner(barWrap);
+
+            const float cardW = 252f;
+            const float cardH = 98f;
+            const float cardY = -18f;
+
+            // Pha 1 — Giao thoa cực đại (Màu Trắng · Cùng pha Δφ=0°)
+            ConfigureOrUpgradeDemoSegment(
+                barWrap,
+                "SegWhite",
+                0,
+                "Pha 1",
+                "Giao thoa cực đại",
+                "Màu Trắng",
+                "Cùng pha (Δφ=0°)",
+                new Vector2(-270f, cardY),
+                new Vector2(cardW, cardH),
+                new Color(0.11f, 0.19f, 0.30f, 0.98f),
+                new Color(0.68f, 0.76f, 0.85f, 0.90f),
+                new Color(0.55f, 0.65f, 0.78f, 0.65f),
+                new Color(0.04f, 0.08f, 0.15f, 1.00f),
+                new Color(0.18f, 0.30f, 0.45f, 0.96f),
+                new Color(0.22f, 0.32f, 0.44f, 0.94f));
+
+            // Pha 2 — Giao thoa trung gian (Màu Xám · Lệch pha Δφ≈90°)
+            ConfigureOrUpgradeDemoSegment(
+                barWrap,
+                "SegGray",
+                1,
+                "Pha 2",
+                "Giao thoa trung gian",
+                "Màu Xám",
+                "Lệch pha (Δφ≈90°)",
+                new Vector2(0f, cardY),
+                new Vector2(cardW, cardH),
+                new Color(0.10f, 0.16f, 0.24f, 0.98f),
+                new Color(0.75f, 0.82f, 0.90f, 0.90f),
+                new Color(0.74f, 0.82f, 0.90f, 0.55f),
+                new Color(1.00f, 1.00f, 1.00f, 1.00f),
+                new Color(0.84f, 0.90f, 0.97f, 0.96f),
+                new Color(0.90f, 0.94f, 0.99f, 0.94f));
+
+            // Pha 3 — Giao thoa cực tiểu (Màu Đen · Ngược pha Δφ=180°)
+            ConfigureOrUpgradeDemoSegment(
+                barWrap,
+                "SegBlack",
+                2,
+                "Pha 3",
+                "Giao thoa cực tiểu",
+                "Màu Đen",
+                "Ngược pha (Δφ=180°)",
+                new Vector2(270f, cardY),
+                new Vector2(cardW, cardH),
+                new Color(0.06f, 0.18f, 0.34f, 0.98f),
+                new Color(0.18f, 0.78f, 1.00f, 0.96f),
+                new Color(0.18f, 0.48f, 0.76f, 0.65f),
+                new Color(1.00f, 1.00f, 1.00f, 1.00f),
+                new Color(0.32f, 0.76f, 1.00f, 0.98f),
+                new Color(0.86f, 0.94f, 1.00f, 0.95f));
+
+            demoSegWhiteRt = barWrap.Find("SegWhite")?.GetComponent<RectTransform>();
+            demoSegGrayRt = barWrap.Find("SegGray")?.GetComponent<RectTransform>();
+            demoSegBlackRt = barWrap.Find("SegBlack")?.GetComponent<RectTransform>();
+
+            Transform thumb = barWrap.Find("PhaseThumbIndicator");
+            if (thumb == null)
+            {
+                GameObject thGo = MainMenuUIBuilder.NewUI("PhaseThumbIndicator", barWrap);
+                thGo.AddComponent<Image>();
+                thumb = thGo.transform;
+            }
+            demoPhaseThumbRt = thumb.GetComponent<RectTransform>();
+            if (demoSegBlackRt != null)
+            {
+                demoPhaseThumbRt.anchorMin = demoSegBlackRt.anchorMin;
+                demoPhaseThumbRt.anchorMax = demoSegBlackRt.anchorMax;
+                demoPhaseThumbRt.pivot = demoSegBlackRt.pivot;
+                demoPhaseThumbRt.sizeDelta = demoSegBlackRt.sizeDelta + new Vector2(10f, 10f);
+                demoPhaseThumbRt.anchoredPosition = demoSegBlackRt.anchoredPosition;
+                demoPhaseThumbRt.position = demoSegBlackRt.position;
+            }
+            else
+            {
+                demoPhaseThumbRt.sizeDelta = new Vector2(cardW + 10f, cardH + 10f);
+                demoPhaseThumbRt.anchoredPosition = new Vector2(270f, cardY);
+            }
+            thumb.SetAsFirstSibling();
+            demoPhaseThumbImg = thumb.GetComponent<Image>();
+            if (demoPhaseThumbImg != null)
+            {
+                LabStyleUI.ApplySlicedSprite(demoPhaseThumbImg, LabStyleUI.GetPrimaryButtonSprite(), false);
+                demoPhaseThumbImg.color = new Color(0.32f, 0.88f, 1f, 0.78f);
+                demoPhaseThumbImg.raycastTarget = false;
+            }
+        }
+
+        private static void EnsureThreePhaseHeaderBanner(Transform barWrap)
+        {
+            Transform headerTr = barWrap.Find("PhaseSectionHeader");
+            GameObject headerGo = headerTr != null
+                ? headerTr.gameObject
+                : MainMenuUIBuilder.NewUI("PhaseSectionHeader", barWrap);
+
+            RectTransform hRt = headerGo.GetComponent<RectTransform>();
+            hRt.anchoredPosition = new Vector2(0f, 52f);
+            hRt.sizeDelta = new Vector2(796f, 30f);
+
+            // Left horizontal glowing cyan line
+            CreateOrUpdateDecorativeImage(
+                headerGo.transform,
+                "LeftGlowLine",
+                null,
+                new Color(0.28f, 0.86f, 1.00f, 0.55f),
+                new Vector2(-236f, 0f),
+                new Vector2(210f, 1.5f));
+
+            // Left "//" cyan parallelogram ticks
+            CreateOrUpdateDecorativeImage(
+                headerGo.transform,
+                "LeftSlashes",
+                MainMenuUIBuilder.GetDoubleSlashTicksSprite(),
+                new Color(0.32f, 0.92f, 1.00f, 0.96f),
+                new Vector2(-118f, 0f),
+                new Vector2(22f, 12f));
+
+            // Right "//" cyan parallelogram ticks
+            CreateOrUpdateDecorativeImage(
+                headerGo.transform,
+                "RightSlashes",
+                MainMenuUIBuilder.GetDoubleSlashTicksSprite(),
+                new Color(0.32f, 0.92f, 1.00f, 0.96f),
+                new Vector2(118f, 0f),
+                new Vector2(22f, 12f));
+
+            // Right horizontal glowing cyan line
+            CreateOrUpdateDecorativeImage(
+                headerGo.transform,
+                "RightGlowLine",
+                null,
+                new Color(0.28f, 0.86f, 1.00f, 0.55f),
+                new Vector2(236f, 0f),
+                new Vector2(210f, 1.5f));
+
+            // Center chamfered pill badge ("3 Pha Giao Thoa")
+            Transform badgeTr = headerGo.transform.Find("HeaderBadge");
+            GameObject badgeGo = badgeTr != null
+                ? badgeTr.gameObject
+                : MainMenuUIBuilder.NewUI("HeaderBadge", headerGo.transform);
+
+            Image badgeImg = badgeGo.GetComponent<Image>() ?? badgeGo.AddComponent<Image>();
+            badgeImg.sprite = MainMenuUIBuilder.GetChamferedTagSprite();
+            badgeImg.type = Image.Type.Sliced;
+            badgeImg.color = new Color(0.08f, 0.16f, 0.28f, 0.96f);
+            badgeImg.raycastTarget = false;
+
+            Outline badgeOut = badgeGo.GetComponent<Outline>() ?? badgeGo.AddComponent<Outline>();
+            badgeOut.effectColor = new Color(0.32f, 0.86f, 1.00f, 0.72f);
+            badgeOut.effectDistance = new Vector2(1.2f, -1.2f);
+
+            RectTransform bRt = badgeGo.GetComponent<RectTransform>();
+            bRt.anchoredPosition = Vector2.zero;
+            bRt.sizeDelta = new Vector2(198f, 28f);
+
+            Transform txtTr = badgeGo.transform.Find("HeaderText");
+            Text hTxt;
+            if (txtTr == null)
+            {
+                hTxt = MainMenuUIBuilder.CreateSubLabel(
+                    badgeGo.transform,
+                    "HeaderText",
+                    "<color=#4CE0FF><size=15>3</size></color> Pha Giao Thoa",
+                    Vector2.zero,
+                    new Vector2(190f, 28f),
+                    13,
+                    FontStyle.Bold,
+                    Color.white,
+                    TextAnchor.MiddleCenter);
+                hTxt.supportRichText = true;
+            }
+            else
+            {
+                hTxt = txtTr.GetComponent<Text>();
+                if (hTxt != null)
+                {
+                    hTxt.supportRichText = true;
+                    hTxt.text = "<color=#4CE0FF><size=15>3</size></color> Pha Giao Thoa";
+                    hTxt.fontSize = 13;
+                    hTxt.fontStyle = FontStyle.Bold;
+                    hTxt.color = Color.white;
+                    hTxt.alignment = TextAnchor.MiddleCenter;
+                }
+            }
+        }
+
+        private static void CreateOrUpdateDecorativeImage(
+            Transform parent,
+            string name,
+            Sprite sprite,
+            Color color,
+            Vector2 pos,
+            Vector2 size)
+        {
+            Transform tr = parent.Find(name);
+            GameObject go = tr != null ? tr.gameObject : MainMenuUIBuilder.NewUI(name, parent);
+            Image img = go.GetComponent<Image>() ?? go.AddComponent<Image>();
+            img.sprite = sprite;
+            img.type = Image.Type.Simple;
+            img.color = color;
+            img.raycastTarget = false;
+            RectTransform rt = go.GetComponent<RectTransform>();
+            rt.anchoredPosition = pos;
+            rt.sizeDelta = size;
         }
 
         private void ResetVisualMarkers()
@@ -361,10 +762,27 @@ namespace Contrast.UI
             bool isCelebrating = Simulation.BotStage == MainMenuUI.DemoBotStage.CelebrateCompletion;
 
             string clipMode;
-            if (isCelebrating || isReachingPoints)
+            if (isCelebrating)
             {
+                // Only wave BOTH arms when celebrating completion after Newton ring measurement is done
                 clipMode = "AnMung";
-                demoAnimClock += safeDt * (isCelebrating ? 1.45f : 1.0f);
+                demoAnimClock += safeDt * 1.45f;
+            }
+            else if (isReachingPoints)
+            {
+                // While creating the 3 Newton ring points (at StageTimer = 0.40s, 1.00s, 1.60s),
+                // raise ONE arm up and lower it back down for each point (no 2-arm waving)
+                float st = Simulation.StageTimer;
+                if (st >= 0.10f && st <= 1.90f)
+                {
+                    clipMode = "PointMark";
+                    demoAnimClock = (st - 0.10f) % 0.60f;
+                }
+                else
+                {
+                    clipMode = "Idle";
+                    demoAnimClock += safeDt;
+                }
             }
             else if (!Simulation.PlayerGrounded)
             {
@@ -519,11 +937,39 @@ namespace Contrast.UI
             }
 
             // 9. Update Live Phase Badge & Synchronized Mini Phase Bar Thumb
-            float targetThumbX = colorIdx == 0 ? -240f : (colorIdx == 1 ? -74f : 92f);
             if (demoPhaseThumbRt != null)
             {
-                Vector2 cur = demoPhaseThumbRt.anchoredPosition;
-                demoPhaseThumbRt.anchoredPosition = new Vector2(Mathf.Lerp(cur.x, targetThumbX, Mathf.Clamp01(safeDt * 14f)), 14f);
+                RectTransform targetSegRt = colorIdx == 0
+                    ? demoSegWhiteRt
+                    : (colorIdx == 1 ? demoSegGrayRt : demoSegBlackRt);
+
+                if (targetSegRt != null)
+                {
+                    demoPhaseThumbRt.anchorMin = targetSegRt.anchorMin;
+                    demoPhaseThumbRt.anchorMax = targetSegRt.anchorMax;
+                    demoPhaseThumbRt.pivot = targetSegRt.pivot;
+                    demoPhaseThumbRt.sizeDelta = targetSegRt.sizeDelta + new Vector2(10f, 10f);
+
+                    Vector2 targetPos = targetSegRt.anchoredPosition;
+                    if (!Application.isPlaying || TotalTime <= 0.85f)
+                    {
+                        demoPhaseThumbRt.anchoredPosition = targetPos;
+                        demoPhaseThumbRt.position = targetSegRt.position;
+                    }
+                    else
+                    {
+                        demoPhaseThumbRt.anchoredPosition = Vector2.Lerp(
+                            demoPhaseThumbRt.anchoredPosition,
+                            targetPos,
+                            Mathf.Clamp01(safeDt * 14f));
+                    }
+                }
+                else
+                {
+                    float targetThumbX = colorIdx == 0 ? -270f : (colorIdx == 1 ? 0f : 270f);
+                    Vector2 cur = demoPhaseThumbRt.anchoredPosition;
+                    demoPhaseThumbRt.anchoredPosition = new Vector2(Mathf.Lerp(cur.x, targetThumbX, Mathf.Clamp01(safeDt * 14f)), -18f);
+                }
             }
 
             if (demoPhaseBadgeBg != null && demoPhaseBadgeText != null)
@@ -533,9 +979,21 @@ namespace Contrast.UI
                     : LabStyleUI.GetPillSprite();
                 demoPhaseBadgeBg.color = Color.white;
                 demoPhaseBadgeText.text = colorIdx == 0
-                    ? "Pha hiện tại: Trắng"
-                    : (colorIdx == 1 ? "Pha hiện tại: Xám" : "Pha hiện tại: Đen");
+                    ? "Giao thoa cực đại · Trắng (Δφ=0°)"
+                    : (colorIdx == 1
+                        ? "Giao thoa trung gian · Xám (Δφ=90°)"
+                        : "Giao thoa cực tiểu · Đen (Δφ=180°)");
                 demoPhaseBadgeText.color = LabStyleUI.TextPrimary;
+            }
+
+            if (demoPhaseBadgeSwatchImg != null)
+            {
+                demoPhaseBadgeSwatchImg.sprite = LabStyleUI.GetSoftCircleSprite();
+                demoPhaseBadgeSwatchImg.color = colorIdx == 0
+                    ? new Color(0.98f, 0.99f, 1.00f, 1f)
+                    : (colorIdx == 1
+                        ? new Color(0.62f, 0.68f, 0.76f, 1f)
+                        : new Color(0.06f, 0.09f, 0.14f, 1f));
             }
 
             if (demoRuleCaptionText != null)
@@ -631,21 +1089,21 @@ namespace Contrast.UI
                     borderCol = new Color(0.75f, 0.90f, 1f, 0.85f);
                     bool isWall = worldSize.y > worldSize.x;
                     objName = isWall ? "WhitePhaseGate" : "WhitePortalStep";
-                    labelStr = isWall ? null : "Bệ Trắng";
+                    labelStr = isWall ? null : "Bệ Cực Đại (Trắng)";
                 }
                 else if (logical == LogicalColor.Gray)
                 {
                     fillCol = new Color(0.55f, 0.60f, 0.66f, 0.96f);
                     borderCol = new Color(0.80f, 0.86f, 0.92f, 0.65f);
                     objName = "GrayPhaseBridge";
-                    labelStr = "Bệ Xám";
+                    labelStr = "Bệ Trung Gian (Xám)";
                 }
                 else
                 {
                     fillCol = new Color(0.08f, 0.10f, 0.15f, 0.98f);
                     borderCol = new Color(0.58f, 0.72f, 0.88f, 0.55f);
                     objName = "BlackPedestal";
-                    labelStr = "Bệ Đen";
+                    labelStr = "Bệ Cực Tiểu (Đen)";
                 }
 
                 Image img = CreateDemoPlatform(viewportTransform, objName, uiPos, uiSize, fillCol, borderCol, labelStr);
@@ -657,10 +1115,10 @@ namespace Contrast.UI
                     MainMenuUIBuilder.CreateSubLabel(
                         viewportTransform,
                         "WhiteGateTag",
-                        "Tường Trắng",
+                        "Tường Cực Đại (Trắng)",
                         demoWhiteGateTagWorldPx,
-                        new Vector2(130f, 22f),
-                        12,
+                        new Vector2(150f, 22f),
+                        11,
                         FontStyle.Bold,
                         LabStyleUI.TextPrimary,
                         TextAnchor.MiddleCenter);
@@ -1090,59 +1548,188 @@ namespace Contrast.UI
         private void BuildDemoPhaseBar(Transform stageTransform)
         {
             GameObject barWrap = MainMenuUIBuilder.NewUI("DemoPhaseBarWrap", stageTransform);
-            RectTransform bwRt = barWrap.GetComponent<RectTransform>();
-            bwRt.sizeDelta = new Vector2(796f, 84f);
-            bwRt.anchoredPosition = new Vector2(0f, -294f);
-
-            float segW = 158f;
-            CreateDemoSegment(barWrap.transform, "SegWhite", "Pha Trắng", new Vector2(-240f, 14f), segW, new Color(0.94f, 0.97f, 1f, 0.96f), new Color(0.08f, 0.12f, 0.18f, 1f));
-            CreateDemoSegment(barWrap.transform, "SegGray", "Pha Xám", new Vector2(-74f, 14f), segW, new Color(0.54f, 0.59f, 0.66f, 0.96f), new Color(0.96f, 0.98f, 1f, 1f));
-            CreateDemoSegment(barWrap.transform, "SegBlack", "Pha Đen", new Vector2(92f, 14f), segW, new Color(0.14f, 0.18f, 0.25f, 0.98f), new Color(0.88f, 0.94f, 1f, 1f));
-
-            GameObject thumb = MainMenuUIBuilder.NewUI("PhaseThumbIndicator", barWrap.transform);
-            demoPhaseThumbImg = thumb.AddComponent<Image>();
-            LabStyleUI.ApplySlicedSprite(demoPhaseThumbImg, LabStyleUI.GetPrimaryButtonSprite(), false);
-            demoPhaseThumbImg.color = new Color(0.55f, 0.82f, 1f, 0.42f);
-            demoPhaseThumbImg.raycastTarget = false;
-            demoPhaseThumbRt = thumb.GetComponent<RectTransform>();
-            demoPhaseThumbRt.sizeDelta = new Vector2(segW + 10f, 40f);
-            demoPhaseThumbRt.anchoredPosition = new Vector2(92f, 14f);
-
-            MainMenuUIBuilder.CreateSubLabel(
-                barWrap.transform,
-                "QuickControlsTag",
-                "← / → : Đổi pha màu\nSPACE : Nhảy   ·   X : Ghi toạ độ",
-                new Vector2(288f, 14f),
-                new Vector2(224f, 44f),
-                12,
-                FontStyle.Bold,
-                LabStyleUI.TextSecondary,
-                TextAnchor.MiddleRight);
-
-            MainMenuUIBuilder.CreateSubLabel(
-                barWrap.transform,
-                "RuleSummaryFooter",
-                "Quy tắc giao thoa: Đi xuyên qua vật cản cùng pha màu và đứng vững trên vật cản khác pha màu",
-                new Vector2(0f, -26f),
-                new Vector2(796f, 24f),
-                12,
-                FontStyle.Normal,
-                LabStyleUI.TextMuted,
-                TextAnchor.MiddleCenter);
+            UpgradeOrBindDemoPhaseBar(barWrap.transform);
         }
 
-        private static void CreateDemoSegment(Transform parent, string name, string textStr, Vector2 pos, float width, Color bgCol, Color textCol)
+        private static void ConfigureOrUpgradeDemoSegment(
+            Transform parent,
+            string name,
+            int phaseIndex,
+            string phaseTagStr,
+            string titleStr,
+            string colorNameStr,
+            string natureStr,
+            Vector2 pos,
+            Vector2 size,
+            Color tagBgCol,
+            Color slashCol,
+            Color dividerCol,
+            Color titleCol,
+            Color colorNameCol,
+            Color natureCol)
         {
-            GameObject seg = MainMenuUIBuilder.NewUI(name, parent);
-            Image img = seg.AddComponent<Image>();
-            LabStyleUI.ApplySlicedSprite(img, LabStyleUI.GetRecessedSlotSprite(), false);
-            img.color = bgCol;
-            img.raycastTarget = false;
-            RectTransform rt = seg.GetComponent<RectTransform>();
-            rt.anchoredPosition = pos;
-            rt.sizeDelta = new Vector2(width, 32f);
+            Transform segTr = parent.Find(name);
+            GameObject seg;
+            if (segTr == null)
+            {
+                seg = MainMenuUIBuilder.NewUI(name, parent);
+                seg.AddComponent<Image>();
+            }
+            else
+            {
+                seg = segTr.gameObject;
+            }
 
-            MainMenuUIBuilder.CreateSubLabel(seg.transform, "Lbl", textStr, Vector2.zero, new Vector2(width, 32f), 12, FontStyle.Bold, textCol, TextAnchor.MiddleCenter);
+            Image img = seg.GetComponent<Image>();
+            if (img != null)
+            {
+                img.sprite = MainMenuUIBuilder.GetPhaseCardSprite(phaseIndex);
+                img.type = Image.Type.Sliced;
+                img.color = Color.white;
+                img.raycastTarget = false;
+            }
+
+            Shadow cardShadow = seg.GetComponent<Shadow>() ?? seg.AddComponent<Shadow>();
+            cardShadow.effectColor = phaseIndex == 2
+                ? new Color(0.10f, 0.65f, 1.00f, 0.35f)
+                : new Color(0.02f, 0.05f, 0.12f, 0.42f);
+            cardShadow.effectDistance = new Vector2(0f, -4f);
+
+            RectTransform rt = seg.GetComponent<RectTransform>();
+            if (segTr == null || rt.sizeDelta.x < 200f)
+            {
+                rt.anchoredPosition = pos;
+                rt.sizeDelta = size;
+            }
+            Vector2 cardSize = rt.sizeDelta;
+
+            // 1. Top-Left Chamfered Phase Tag ("Pha 1" / "Pha 2" / "Pha 3") + "//" Slashes
+            Transform tagTr = seg.transform.Find("PhaseTag");
+            GameObject tagGo = tagTr != null ? tagTr.gameObject : MainMenuUIBuilder.NewUI("PhaseTag", seg.transform);
+            Image tagImg = tagGo.GetComponent<Image>() ?? tagGo.AddComponent<Image>();
+            tagImg.sprite = MainMenuUIBuilder.GetChamferedTagSprite();
+            tagImg.type = Image.Type.Sliced;
+            tagImg.color = tagBgCol;
+            tagImg.raycastTarget = false;
+            RectTransform tagRt = tagGo.GetComponent<RectTransform>();
+            tagRt.anchorMin = new Vector2(0f, 1f);
+            tagRt.anchorMax = new Vector2(0f, 1f);
+            tagRt.pivot = new Vector2(0f, 1f);
+            tagRt.anchoredPosition = new Vector2(10f, -7f);
+            tagRt.sizeDelta = new Vector2(56f, 20f);
+
+            Transform tagTxtTr = tagGo.transform.Find("TagLbl");
+            Text tagTxt = tagTxtTr != null
+                ? tagTxtTr.GetComponent<Text>()
+                : MainMenuUIBuilder.CreateSubLabel(tagGo.transform, "TagLbl", phaseTagStr, Vector2.zero, new Vector2(56f, 20f), 11, FontStyle.Bold, Color.white, TextAnchor.MiddleCenter);
+            if (tagTxt != null)
+            {
+                tagTxt.text = phaseTagStr;
+                tagTxt.fontSize = 11;
+                tagTxt.fontStyle = FontStyle.Bold;
+                tagTxt.color = Color.white;
+                tagTxt.alignment = TextAnchor.MiddleCenter;
+                MainMenuUIBuilder.Stretch(tagTxt.GetComponent<RectTransform>());
+            }
+
+            CreateOrUpdateDecorativeImage(
+                seg.transform,
+                "PhaseSlashes",
+                MainMenuUIBuilder.GetDoubleSlashTicksSprite(),
+                slashCol,
+                new Vector2(-cardSize.x * 0.5f + 78f, cardSize.y * 0.5f - 17f),
+                new Vector2(20f, 12f));
+
+            // 2. Large Circle Color Swatch on Left showing exact in-game color (Trắng / Xám / Đen)
+            Transform swTr = seg.transform.Find("ColorSwatch");
+            GameObject swGo = swTr != null ? swTr.gameObject : MainMenuUIBuilder.NewUI("ColorSwatch", seg.transform);
+            Image swImg = swGo.GetComponent<Image>() ?? swGo.AddComponent<Image>();
+            swImg.sprite = MainMenuUIBuilder.GetPhaseCircleSwatchSprite(phaseIndex);
+            swImg.type = Image.Type.Simple;
+            swImg.color = Color.white;
+            swImg.raycastTarget = false;
+            Outline oldOut = swGo.GetComponent<Outline>();
+            if (oldOut != null)
+                oldOut.enabled = false;
+
+            RectTransform swRt = swGo.GetComponent<RectTransform>();
+            swRt.anchorMin = new Vector2(0f, 0.5f);
+            swRt.anchorMax = new Vector2(0f, 0.5f);
+            swRt.pivot = new Vector2(0.5f, 0.5f);
+            swRt.anchoredPosition = new Vector2(36f, -9f);
+            swRt.sizeDelta = new Vector2(44f, 44f);
+
+            // 3. Vertical Divider Line between Circle Swatch and Text Block
+            CreateOrUpdateDecorativeImage(
+                seg.transform,
+                "VertDivider",
+                null,
+                dividerCol,
+                new Vector2(-cardSize.x * 0.5f + 68f, -9f),
+                new Vector2(1.5f, 52f));
+
+            // 4. Line 1: Interference Title ("Giao thoa cực đại / trung gian / cực tiểu")
+            Transform lblTr = seg.transform.Find("Lbl");
+            Text lblTxt = lblTr != null
+                ? lblTr.GetComponent<Text>()
+                : MainMenuUIBuilder.CreateSubLabel(seg.transform, "Lbl", titleStr, Vector2.zero, size, 14, FontStyle.Bold, titleCol, TextAnchor.MiddleLeft);
+            if (lblTxt != null)
+            {
+                lblTxt.font = MainMenuUIBuilder.GetFont();
+                lblTxt.text = titleStr;
+                lblTxt.fontSize = 14;
+                lblTxt.fontStyle = FontStyle.Bold;
+                lblTxt.color = titleCol;
+                lblTxt.alignment = TextAnchor.MiddleLeft;
+                RectTransform lblRt = lblTxt.GetComponent<RectTransform>();
+                lblRt.anchorMin = new Vector2(0f, 0.5f);
+                lblRt.anchorMax = new Vector2(1f, 0.5f);
+                lblRt.pivot = new Vector2(0.5f, 0.5f);
+                lblRt.offsetMin = new Vector2(78f, 4f);
+                lblRt.offsetMax = new Vector2(-8f, 26f);
+            }
+
+            // 5. Line 2: In-Game Color Label ("Màu Trắng" / "Màu Xám" / "Màu Đen")
+            Transform colLblTr = seg.transform.Find("ColorNameLbl");
+            Text colTxt = colLblTr != null
+                ? colLblTr.GetComponent<Text>()
+                : MainMenuUIBuilder.CreateSubLabel(seg.transform, "ColorNameLbl", colorNameStr, Vector2.zero, size, 12, FontStyle.Bold, colorNameCol, TextAnchor.MiddleLeft);
+            if (colTxt != null)
+            {
+                colTxt.font = MainMenuUIBuilder.GetFont();
+                colTxt.text = colorNameStr;
+                colTxt.fontSize = 12;
+                colTxt.fontStyle = FontStyle.Bold;
+                colTxt.color = colorNameCol;
+                colTxt.alignment = TextAnchor.MiddleLeft;
+                RectTransform colRt = colTxt.GetComponent<RectTransform>();
+                colRt.anchorMin = new Vector2(0f, 0.5f);
+                colRt.anchorMax = new Vector2(1f, 0.5f);
+                colRt.pivot = new Vector2(0.5f, 0.5f);
+                colRt.offsetMin = new Vector2(78f, -15f);
+                colRt.offsetMax = new Vector2(-8f, 5f);
+            }
+
+            // 6. Line 3: Physical Phase Relation ("Cùng pha (Δφ=0°)" / "Lệch pha (Δφ≈90°)" / "Ngược pha (Δφ=180°)")
+            Transform natTr = seg.transform.Find("NatureLbl");
+            Text natTxt = natTr != null
+                ? natTr.GetComponent<Text>()
+                : MainMenuUIBuilder.CreateSubLabel(seg.transform, "NatureLbl", natureStr, Vector2.zero, size, 11, FontStyle.Bold, natureCol, TextAnchor.MiddleLeft);
+            if (natTxt != null)
+            {
+                natTxt.font = MainMenuUIBuilder.GetFont();
+                natTxt.text = natureStr;
+                natTxt.fontSize = 11;
+                natTxt.fontStyle = FontStyle.Bold;
+                natTxt.color = natureCol;
+                natTxt.alignment = TextAnchor.MiddleLeft;
+                RectTransform natRt = natTxt.GetComponent<RectTransform>();
+                natRt.anchorMin = new Vector2(0f, 0.5f);
+                natRt.anchorMax = new Vector2(1f, 0.5f);
+                natRt.pivot = new Vector2(0.5f, 0.5f);
+                natRt.offsetMin = new Vector2(78f, -34f);
+                natRt.offsetMax = new Vector2(-8f, -14f);
+            }
         }
     }
 }

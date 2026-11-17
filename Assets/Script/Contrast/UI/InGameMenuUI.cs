@@ -30,10 +30,145 @@ namespace Contrast.UI
 
         private void Awake()
         {
-            EnsureEventSystem();
-            BuildUI();
-            BindAudioEvents();
+            EnsureInitialized();
+            if (Application.isPlaying)
+                BindAudioEvents();
             Show(false);
+        }
+
+        public void EnsureInitialized()
+        {
+            if (panel != null)
+                return;
+
+            EnsureEventSystem();
+
+            Transform existingPanel = transform.Find("Canvas/Panel");
+            if (existingPanel != null && TryBindExistingUI(existingPanel))
+                return;
+
+            Transform staleCanvas = transform.Find("Canvas");
+            if (staleCanvas != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(staleCanvas.gameObject);
+                else
+                    DestroyImmediate(staleCanvas.gameObject);
+            }
+
+            BuildUI();
+        }
+
+        private bool TryBindExistingUI(Transform existingPanel)
+        {
+            Transform modal = existingPanel.Find("Modal");
+            if (modal == null)
+                return false;
+
+            panel = existingPanel.gameObject;
+            Image modalBg = modal.GetComponent<Image>();
+            if (modalBg != null)
+                LabStyleUI.ApplySlicedSprite(modalBg, LabStyleUI.GetCardSprite(), false);
+
+            Transform badge = modal.Find("ContextBadge");
+            if (badge != null)
+            {
+                Image bBg = badge.GetComponent<Image>();
+                if (bBg != null)
+                    LabStyleUI.ApplySlicedSprite(bBg, LabStyleUI.GetPillSprite(), false);
+                contextBadgeText = badge.Find("BadgeText")?.GetComponent<Text>();
+            }
+
+            Transform audioCard = modal.Find("AudioSettingsCard");
+            if (audioCard != null)
+            {
+                Image aBg = audioCard.GetComponent<Image>();
+                if (aBg != null)
+                    LabStyleUI.ApplySlicedSprite(aBg, LabStyleUI.GetRecessedSlotSprite(), false);
+
+                musicSlider = BindSliderRow(audioCard, "MusicRow", out musicValText, val =>
+                {
+                    if (suppressSliderEvents) return;
+                    ContrastAudioManager.EnsureInstance().SetMusicVolume(val);
+                    if (musicValText != null)
+                        musicValText.text = $"{Mathf.RoundToInt(val * 100f)}%";
+                });
+
+                sfxSlider = BindSliderRow(audioCard, "SfxRow", out sfxValText, val =>
+                {
+                    if (suppressSliderEvents) return;
+                    ContrastAudioManager.EnsureInstance().SetSfxVolume(val);
+                    if (sfxValText != null)
+                        sfxValText.text = $"{Mathf.RoundToInt(val * 100f)}%";
+                });
+            }
+
+            BindModalButton(modal, "ResumeButton", LabStyleUI.GetPrimaryButtonSprite(), LabStyleUI.IconKind.PlayTriangle, OnResumeClicked, out _);
+            BindModalButton(modal, "RestartButton", LabStyleUI.GetSecondaryButtonSprite(), LabStyleUI.IconKind.Restart, OnRestartClicked, out _);
+            BindModalButton(modal, "ReturnButton", LabStyleUI.GetPillSprite(), LabStyleUI.IconKind.ChevronLeft, OnReturnClicked, out returnButtonTitleText);
+
+            return true;
+        }
+
+        private static Slider BindSliderRow(Transform parent, string rowName, out Text valText, UnityEngine.Events.UnityAction<float> onChanged)
+        {
+            valText = null;
+            Transform row = parent.Find(rowName);
+            if (row == null) return null;
+            valText = row.Find("Value")?.GetComponent<Text>();
+            Transform sliderTr = row.Find("Slider");
+            if (sliderTr == null) return null;
+
+            Image bgImg = sliderTr.Find("Background")?.GetComponent<Image>();
+            if (bgImg != null)
+            {
+                Color c = bgImg.color;
+                LabStyleUI.ApplySlicedSprite(bgImg, LabStyleUI.GetPillSprite(), false);
+                bgImg.color = c;
+            }
+            Image fillImg = sliderTr.Find("Fill Area/Fill")?.GetComponent<Image>();
+            if (fillImg != null)
+                LabStyleUI.ApplySlicedSprite(fillImg, LabStyleUI.GetPrimaryButtonSprite(), false);
+            Image handleImg = sliderTr.Find("Handle Slide Area/Handle")?.GetComponent<Image>();
+            if (handleImg != null)
+            {
+                handleImg.sprite = LabStyleUI.GetCircleButtonSprite();
+                handleImg.type = Image.Type.Simple;
+            }
+
+            Slider s = sliderTr.GetComponent<Slider>();
+            if (s != null)
+            {
+                s.onValueChanged.RemoveAllListeners();
+                s.onValueChanged.AddListener(onChanged);
+            }
+            return s;
+        }
+
+        private static void BindModalButton(
+            Transform parent,
+            string name,
+            Sprite bgSprite,
+            LabStyleUI.IconKind iconKind,
+            UnityEngine.Events.UnityAction onClick,
+            out Text titleText)
+        {
+            titleText = null;
+            Transform tr = parent.Find(name);
+            if (tr == null) return;
+            Image img = tr.GetComponent<Image>();
+            if (img != null)
+                LabStyleUI.ApplySlicedSprite(img, bgSprite, false);
+            Image ic = tr.Find("Icon")?.GetComponent<Image>();
+            if (ic != null)
+                ic.sprite = LabStyleUI.GetIconSprite(iconKind);
+            titleText = tr.Find("Label")?.GetComponent<Text>();
+            Button btn = tr.GetComponent<Button>();
+            if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(onClick);
+            }
         }
 
         private void OnDestroy()
@@ -441,7 +576,7 @@ namespace Contrast.UI
 
         private static void EnsureEventSystem()
         {
-            if (FindObjectOfType<EventSystem>() != null)
+            if (Contrast.Core.UnityCompat.FindAny<EventSystem>() != null)
                 return;
 
             GameObject go = new GameObject("EventSystem");

@@ -68,7 +68,7 @@ namespace Contrast.Audio
         {
             if (Instance == null)
             {
-                Instance = FindObjectOfType<ContrastAudioManager>();
+                Instance = Contrast.Core.UnityCompat.FindAny<ContrastAudioManager>();
                 if (Instance == null)
                 {
                     GameObject go = new GameObject("ContrastAudioManager");
@@ -243,7 +243,11 @@ namespace Contrast.Audio
             using (UnityWebRequest req = UnityWebRequestMultimedia.GetAudioClip(uri, AudioType.MPEG))
             {
                 yield return req.SendWebRequest();
+#if UNITY_2020_1_OR_NEWER
+                if (req.result != UnityWebRequest.Result.Success)
+#else
                 if (req.isNetworkError || req.isHttpError)
+#endif
                 {
                     Debug.LogWarning($"[AUDIO] Could not stream MP3 '{fileName}': {req.error}");
                     yield break;

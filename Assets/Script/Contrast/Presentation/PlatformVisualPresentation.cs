@@ -253,7 +253,7 @@ namespace Contrast.Presentation
         private void UpdateProximityResonance()
         {
             if (cachedPlayer == null)
-                cachedPlayer = FindObjectOfType<PlayerController>();
+                cachedPlayer = Contrast.Core.UnityCompat.FindAny<PlayerController>();
 
             if (cachedPlayer == null || resonanceRenderer == null)
                 return;

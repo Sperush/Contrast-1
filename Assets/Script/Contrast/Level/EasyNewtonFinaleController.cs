@@ -268,7 +268,7 @@ namespace Contrast.Level
         public void SyncCameraTransitionConfig()
         {
             if (cameraFollow == null)
-                cameraFollow = FindObjectOfType<CameraFollow>();
+                cameraFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>();
             if (cameraFollow == null)
                 return;
 
@@ -297,8 +297,8 @@ namespace Contrast.Level
             if (Instance == null)
                 Instance = this;
 
-            player = pc != null ? pc : FindObjectOfType<PlayerController>();
-            cameraFollow = cf != null ? cf : FindObjectOfType<CameraFollow>();
+            player = pc != null ? pc : Contrast.Core.UnityCompat.FindAny<PlayerController>();
+            cameraFollow = cf != null ? cf : Contrast.Core.UnityCompat.FindAny<CameraFollow>();
 
             if (newtonData != null)
             {
@@ -1293,12 +1293,12 @@ namespace Contrast.Level
 
             if (player == null)
             {
-                player = FindObjectOfType<PlayerController>();
+                player = Contrast.Core.UnityCompat.FindAny<PlayerController>();
                 if (player == null) return;
             }
 
             if (cameraFollow == null)
-                cameraFollow = FindObjectOfType<CameraFollow>();
+                cameraFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>();
 
             // Handle proximity to finale chamber using the pre-Newton platform left boundary (Task E).
             // Camera position and orthographicSize are updated exclusively by CameraFollow.ProcessCameraUpdate().
@@ -2022,7 +2022,7 @@ namespace Contrast.Level
         private static Font GetFont()
         {
 #if UNITY_2022_2_OR_NEWER
-            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return Contrast.Core.UnityCompat.GetBuiltinFont();
 #else
             return Resources.GetBuiltinResource<Font>("Arial.ttf");
 #endif

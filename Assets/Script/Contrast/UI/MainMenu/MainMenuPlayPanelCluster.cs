@@ -22,6 +22,90 @@ namespace Contrast.UI
                 RootPanel.SetActive(active);
         }
 
+        public bool BindExisting(
+            Transform parent,
+            UnityAction onPlayFromStart,
+            Action<int> onSelectDirectLevel,
+            UnityAction onOpenSettings,
+            UnityAction onQuitApplication)
+        {
+            Transform existing = parent.Find("PlaySubMenuPanel");
+            if (existing == null)
+                return false;
+
+            RootPanel = existing.gameObject;
+            Image cardBg = RootPanel.GetComponent<Image>();
+            if (cardBg != null)
+                LabStyleUI.ApplySlicedSprite(cardBg, LabStyleUI.GetCardSprite(), false);
+
+            BindButton(existing, "PlayFromStartButton", LabStyleUI.GetPrimaryButtonSprite(), LabStyleUI.IconKind.PlayTriangle, onPlayFromStart);
+            BindLevelButton(existing, "SelectLevel_L01", () => onSelectDirectLevel(0));
+            BindLevelButton(existing, "SelectLevel_L02", () => onSelectDirectLevel(1));
+            BindLevelButton(existing, "SelectLevel_L03", () => onSelectDirectLevel(2));
+            BindButton(existing, "SettingsButton", LabStyleUI.GetPillSprite(), LabStyleUI.IconKind.SettingsSliders, onOpenSettings);
+            BindButton(existing, "ExitButton", LabStyleUI.GetDangerButtonSprite(), LabStyleUI.IconKind.PowerExit, onQuitApplication);
+
+            return true;
+        }
+
+        private static void BindButton(Transform parent, string name, Sprite bgSprite, LabStyleUI.IconKind iconKind, UnityAction onClick)
+        {
+            Transform tr = parent.Find(name);
+            if (tr == null) return;
+            Image img = tr.GetComponent<Image>();
+            if (img != null)
+                LabStyleUI.ApplySlicedSprite(img, bgSprite, false);
+            Transform iconTr = tr.Find("Icon");
+            if (iconTr != null)
+            {
+                Image icImg = iconTr.GetComponent<Image>();
+                if (icImg != null)
+                    icImg.sprite = LabStyleUI.GetIconSprite(iconKind);
+            }
+            Button btn = tr.GetComponent<Button>();
+            if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(onClick);
+            }
+        }
+
+        private static void BindLevelButton(Transform parent, string name, UnityAction onClick)
+        {
+            Transform tr = parent.Find(name);
+            if (tr == null) return;
+            Image img = tr.GetComponent<Image>();
+            if (img != null)
+                LabStyleUI.ApplySlicedSprite(img, LabStyleUI.GetSecondaryButtonSprite(), false);
+            Transform orderCircle = tr.Find("OrderCircle");
+            if (orderCircle != null)
+            {
+                Image cImg = orderCircle.GetComponent<Image>();
+                if (cImg != null)
+                    cImg.sprite = LabStyleUI.GetSoftCircleSprite();
+            }
+            Transform waveSlot = tr.Find("WavelengthSlot");
+            if (waveSlot != null)
+            {
+                Image sImg = waveSlot.GetComponent<Image>();
+                if (sImg != null)
+                    LabStyleUI.ApplySlicedSprite(sImg, LabStyleUI.GetRecessedSlotSprite(), false);
+                Transform dot = waveSlot.Find("SpectrumDot");
+                if (dot != null)
+                {
+                    Image dImg = dot.GetComponent<Image>();
+                    if (dImg != null)
+                        dImg.sprite = LabStyleUI.GetSoftCircleSprite();
+                }
+            }
+            Button btn = tr.GetComponent<Button>();
+            if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(onClick);
+            }
+        }
+
         public void Build(
             Transform parent,
             UnityAction onPlayFromStart,

@@ -53,28 +53,28 @@ namespace Contrast.Level
         {
             if (levelLoader == null)
             {
-                levelLoader = FindObjectOfType<LevelLoader>();
+                levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>();
                 if (levelLoader == null)
                     levelLoader = gameObject.AddComponent<LevelLoader>();
             }
 
             if (editorController == null)
             {
-                editorController = FindObjectOfType<LevelEditorController>();
+                editorController = Contrast.Core.UnityCompat.FindAny<LevelEditorController>();
                 if (editorController == null)
                     editorController = gameObject.AddComponent<LevelEditorController>();
             }
 
             if (editorUI == null)
             {
-                editorUI = FindObjectOfType<LevelEditorUI>();
+                editorUI = Contrast.Core.UnityCompat.FindAny<LevelEditorUI>();
                 if (editorUI == null)
                     editorUI = gameObject.AddComponent<LevelEditorUI>();
             }
 
             if (levelSelectUI == null)
             {
-                levelSelectUI = FindObjectOfType<LevelSelectUI>();
+                levelSelectUI = Contrast.Core.UnityCompat.FindAny<LevelSelectUI>();
                 if (levelSelectUI == null)
                     levelSelectUI = new GameObject("LevelSelectUI").AddComponent<LevelSelectUI>();
             }
@@ -93,7 +93,7 @@ namespace Contrast.Level
 
         private static void EnsureEventSystem()
         {
-            if (FindObjectOfType<EventSystem>() != null)
+            if (Contrast.Core.UnityCompat.FindAny<EventSystem>() != null)
                 return;
 
             GameObject go = new GameObject("EventSystem");

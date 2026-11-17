@@ -15,8 +15,36 @@ namespace Contrast.UI
 
         private void Awake()
         {
-            BuildUI();
+            EnsureInitialized();
             Show(false);
+        }
+
+        public void EnsureInitialized()
+        {
+            if (panel != null)
+                return;
+
+            Transform existingPanel = transform.Find("Canvas/Panel");
+            if (existingPanel != null)
+            {
+                panel = existingPanel.gameObject;
+                titleText = existingPanel.Find("Title")?.GetComponent<Text>();
+                subText = existingPanel.Find("Subtitle")?.GetComponent<Text>();
+                if (titleText != null && subText != null)
+                    return;
+                panel = null;
+            }
+
+            Transform staleCanvas = transform.Find("Canvas");
+            if (staleCanvas != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(staleCanvas.gameObject);
+                else
+                    DestroyImmediate(staleCanvas.gameObject);
+            }
+
+            BuildUI();
         }
 
         public void Show(bool visible, string customTitle = null, string customSubtitle = null)
@@ -109,7 +137,7 @@ namespace Contrast.UI
         private static Font GetFont()
         {
 #if UNITY_2022_2_OR_NEWER
-            return Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            return Contrast.Core.UnityCompat.GetBuiltinFont();
 #else
             return Resources.GetBuiltinResource<Font>("Arial.ttf");
 #endif

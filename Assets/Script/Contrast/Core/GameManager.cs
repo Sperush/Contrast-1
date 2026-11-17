@@ -22,6 +22,52 @@ namespace Contrast.Core
     {
         public static GameManager Instance { get; private set; }
 
+        public const string MainMenuSceneName = "MainMenuScene";
+        public const string GameplaySceneName = "GameplayScene";
+        public const string LegacySampleSceneName = "SampleScene";
+
+        private static bool hasPendingCampaignLaunch;
+        private static int pendingCampaignLevelIndex = -1;
+
+        public static bool HasPendingCampaignLaunch => hasPendingCampaignLaunch;
+        public static int PendingCampaignLevelIndex => pendingCampaignLevelIndex;
+
+        /// <summary>
+        /// Called from <see cref="MainMenuUI"/> when the player selects Campaign Start (0)
+        /// or Direct Level (0, 1, 2). Transitions from <c>MainMenuScene</c> into
+        /// <c>GameplayScene</c> and automatically builds the level from JSON.
+        /// </summary>
+        public static void LaunchCampaignFromMainMenu(int levelIndex = 0)
+        {
+            int clampedIndex = Mathf.Clamp(levelIndex, 0, CampaignLevelResources.Length - 1);
+            hasPendingCampaignLaunch = true;
+            pendingCampaignLevelIndex = clampedIndex;
+
+            if (Instance != null && Instance.levelLoader != null)
+            {
+                hasPendingCampaignLaunch = false;
+                pendingCampaignLevelIndex = -1;
+                Instance.PlayCampaignLevel(clampedIndex);
+                return;
+            }
+
+            if (Application.CanStreamedLevelBeLoaded(GameplaySceneName))
+            {
+                Debug.Log($"[FLOW][SCENE] Loading '{GameplaySceneName}' for campaign level index={clampedIndex}");
+                UnityEngine.SceneManagement.SceneManager.LoadScene(GameplaySceneName);
+            }
+            else if (Application.CanStreamedLevelBeLoaded(LegacySampleSceneName))
+            {
+                Debug.Log($"[FLOW][SCENE] Fallback loading '{LegacySampleSceneName}' for campaign level index={clampedIndex}");
+                UnityEngine.SceneManagement.SceneManager.LoadScene(LegacySampleSceneName);
+            }
+            else
+            {
+                Debug.LogWarning($"[FLOW][SCENE] Scene '{GameplaySceneName}' is not in Build Settings; attempting direct LoadScene.");
+                UnityEngine.SceneManagement.SceneManager.LoadScene(GameplaySceneName);
+            }
+        }
+
         [SerializeField] private GameOverUI gameOverUI;
         [SerializeField] private GameControlUI gameControlUI;
         [SerializeField] private InGameMenuUI inGameMenuUI;
@@ -67,30 +113,35 @@ namespace Contrast.Core
         private static void ResetStaticInstance()
         {
             Instance = null;
-        }
-
-        public static T FindObjectIncludingInactive<T>() where T : Component
-        {
-            T active = FindObjectOfType<T>();
-            if (active != null)
-                return active;
-
-            T[] all = Resources.FindObjectsOfTypeAll<T>();
-            for (int i = 0; i < all.Length; i++)
-            {
-                if (all[i] != null && all[i].gameObject.scene.IsValid())
-                    return all[i];
-            }
-            return null;
+            hasPendingCampaignLaunch = false;
+            pendingCampaignLevelIndex = -1;
         }
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureGameplaySceneLoaded()
         {
-            if (FindObjectIncludingInactive<GameManager>() == null)
+            if (Contrast.Core.UnityCompat.FindAny<GameManager>(true) != null)
+                return;
+
+            if (Contrast.Core.UnityCompat.FindAny<MainMenuUI>(true) != null)
+                return;
+
+            if (Contrast.Core.UnityCompat.FindAny<StandaloneLevelEditorBootstrapper>(true) != null)
+                return;
+
+            string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (activeSceneName == MainMenuSceneName || activeSceneName == GameplaySceneName || activeSceneName == "LevelEditorScene")
+                return;
+
+            if (Application.CanStreamedLevelBeLoaded(MainMenuSceneName))
+            {
+                Debug.Log("[FLOW][BOOT] No scene controller in active scene -> loading MainMenuScene automatically.");
+                UnityEngine.SceneManagement.SceneManager.LoadScene(MainMenuSceneName);
+            }
+            else
             {
                 Debug.Log("[FLOW][BOOT] No GameManager in active scene -> loading SampleScene automatically.");
-                UnityEngine.SceneManagement.SceneManager.LoadScene("SampleScene");
+                UnityEngine.SceneManagement.SceneManager.LoadScene(LegacySampleSceneName);
             }
         }
 
@@ -104,15 +155,15 @@ namespace Contrast.Core
 
             Instance = this;
 
-            if (player == null) player = FindObjectIncludingInactive<PlayerController>();
-            if (levelLoader == null) levelLoader = FindObjectIncludingInactive<LevelLoader>();
-            if (cameraFollow == null) cameraFollow = FindObjectIncludingInactive<CameraFollow>();
-            if (gameOverUI == null) gameOverUI = FindObjectIncludingInactive<GameOverUI>();
-            if (gameControlUI == null) gameControlUI = FindObjectIncludingInactive<GameControlUI>();
-            if (inGameMenuUI == null) inGameMenuUI = FindObjectIncludingInactive<InGameMenuUI>();
-            if (mainMenuUI == null) mainMenuUI = FindObjectIncludingInactive<MainMenuUI>();
-            if (loadingOverlayUI == null) loadingOverlayUI = FindObjectIncludingInactive<LoadingOverlayUI>();
-            if (virtualControlsUI == null) virtualControlsUI = FindObjectIncludingInactive<VirtualControlsUI>();
+            if (player == null) player = Contrast.Core.UnityCompat.FindAny<PlayerController>(true);
+            if (levelLoader == null) levelLoader = Contrast.Core.UnityCompat.FindAny<LevelLoader>(true);
+            if (cameraFollow == null) cameraFollow = Contrast.Core.UnityCompat.FindAny<CameraFollow>(true);
+            if (gameOverUI == null) gameOverUI = Contrast.Core.UnityCompat.FindAny<GameOverUI>(true);
+            if (gameControlUI == null) gameControlUI = Contrast.Core.UnityCompat.FindAny<GameControlUI>(true);
+            if (inGameMenuUI == null) inGameMenuUI = Contrast.Core.UnityCompat.FindAny<InGameMenuUI>(true);
+            if (mainMenuUI == null) mainMenuUI = Contrast.Core.UnityCompat.FindAny<MainMenuUI>(true);
+            if (loadingOverlayUI == null) loadingOverlayUI = Contrast.Core.UnityCompat.FindAny<LoadingOverlayUI>(true);
+            if (virtualControlsUI == null) virtualControlsUI = Contrast.Core.UnityCompat.FindAny<VirtualControlsUI>(true);
 
             if (gameOverUI == null)
                 gameOverUI = new GameObject("GameOverUI").AddComponent<GameOverUI>();
@@ -126,26 +177,28 @@ namespace Contrast.Core
             if (inGameMenuUI == null)
                 inGameMenuUI = new GameObject("InGameMenuUI").AddComponent<InGameMenuUI>();
 
-            if (mainMenuUI == null)
+            string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            bool isDedicatedGameplayScene = activeSceneName == GameplaySceneName || hasPendingCampaignLaunch;
+            if (mainMenuUI == null && !isDedicatedGameplayScene)
                 mainMenuUI = new GameObject("MainMenuUI").AddComponent<MainMenuUI>();
 
             if (loadingOverlayUI == null)
                 loadingOverlayUI = new GameObject("LoadingOverlayUI").AddComponent<LoadingOverlayUI>();
 
             // Ensure Load Level from JSON and Level Editor UI/Controller are disabled if present
-            if (levelSelectUI == null) levelSelectUI = FindObjectIncludingInactive<LevelSelectUI>();
+            if (levelSelectUI == null) levelSelectUI = Contrast.Core.UnityCompat.FindAny<LevelSelectUI>(true);
             if (levelSelectUI != null)
                 levelSelectUI.Show(false);
 
-            if (levelEditor == null) levelEditor = FindObjectIncludingInactive<LevelEditorController>();
+            if (levelEditor == null) levelEditor = Contrast.Core.UnityCompat.FindAny<LevelEditorController>(true);
             if (levelEditor != null)
                 levelEditor.StopEditing();
 
-            if (levelEditorUI == null) levelEditorUI = FindObjectIncludingInactive<LevelEditorUI>();
+            if (levelEditorUI == null) levelEditorUI = Contrast.Core.UnityCompat.FindAny<LevelEditorUI>(true);
             if (levelEditorUI != null)
                 levelEditorUI.Show(false);
 
-            if (testModeUI == null) testModeUI = FindObjectIncludingInactive<TestModeUI>();
+            if (testModeUI == null) testModeUI = Contrast.Core.UnityCompat.FindAny<TestModeUI>(true);
             if (testModeUI == null)
                 testModeUI = new GameObject("TestModeUI").AddComponent<TestModeUI>();
 
@@ -155,16 +208,41 @@ namespace Contrast.Core
 
         private void Start()
         {
+            if (hasPendingCampaignLaunch)
+            {
+                int targetIndex = pendingCampaignLevelIndex >= 0 ? pendingCampaignLevelIndex : 0;
+                hasPendingCampaignLaunch = false;
+                pendingCampaignLevelIndex = -1;
+                PlayCampaignLevel(targetIndex);
+                return;
+            }
+
+            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == GameplaySceneName)
+            {
+                PlayCampaignLevel(0);
+                return;
+            }
+
             SetState(GameState.MainMenu);
         }
 
         public void SetTestMode(bool enabled)
         {
-            if (player != null)
-                player.SetTestMode(enabled);
+            bool effectiveEnabled;
+            if (Config.Instance.enableTest)
+            {
+                effectiveEnabled = enabled;
+            }
+            else
+            {
+                effectiveEnabled = false;
+            }
 
-            cameraFollow?.SetTestModeFreeMove(enabled);
-            testModeUI?.Show(enabled);
+            if (player != null)
+                player.SetTestMode(effectiveEnabled);
+
+            cameraFollow?.SetTestModeFreeMove(effectiveEnabled);
+            testModeUI?.Show(effectiveEnabled);
         }
 
         // The only gameplay Update path.
@@ -210,17 +288,27 @@ namespace Contrast.Core
                 return;
             }
 
-            if (player != null && player.IsTestModeActive && EscapeKeyPressed())
+            if (Config.Instance.enableTest)
             {
-                SetTestMode(false);
-                return;
-            }
+                if (player != null && player.IsTestModeActive && EscapeKeyPressed())
+                {
+                    SetTestMode(false);
+                    return;
+                }
 
-            if (TKeyPressed())
+                if (TKeyPressed())
+                {
+                    bool nextMode = player != null ? !player.IsTestModeActive : false;
+                    SetTestMode(nextMode);
+                    return;
+                }
+            }
+            else
             {
-                bool nextMode = player != null ? !player.IsTestModeActive : false;
-                SetTestMode(nextMode);
-                return;
+                if (player != null && player.IsTestModeActive)
+                {
+                    SetTestMode(false);
+                }
             }
 
             if (EscapeKeyPressed())
@@ -575,6 +663,25 @@ namespace Contrast.Core
 
             CurrentCampaignIndex = -1;
             CurrentEntryContext = GameplayEntryContext.MainMenuGameplay;
+
+            string activeSceneName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (Application.isPlaying &&
+                activeSceneName == GameplaySceneName &&
+                Application.CanStreamedLevelBeLoaded(MainMenuSceneName))
+            {
+                if (EasyNewtonFinaleController.Instance != null)
+                    EasyNewtonFinaleController.Instance.Teardown();
+                ColorPlatform.All.Clear();
+                LevelMarker.ClearRegistry();
+                Instance = null;
+                UnityEngine.SceneManagement.SceneManager.LoadScene(MainMenuSceneName);
+                return;
+            }
+
+            if (mainMenuUI == null)
+                mainMenuUI = Contrast.Core.UnityCompat.FindAny<MainMenuUI>(true)
+                             ?? new GameObject("MainMenuUI").AddComponent<MainMenuUI>();
+
             SetState(GameState.MainMenu);
         }
 
@@ -812,7 +919,7 @@ namespace Contrast.Core
             Keyboard kb = Keyboard.current;
             return kb != null && kb.escapeKey.wasPressedThisFrame;
 #else
-            return UnityEngine.Input.GetKeyDown(KeyCode.Escape);
+            return Input.GetKeyDown(KeyCode.Escape);
 #endif
         }
 
@@ -822,7 +929,7 @@ namespace Contrast.Core
             Keyboard kb = Keyboard.current;
             return kb != null && kb.tKey.wasPressedThisFrame;
 #else
-            return UnityEngine.Input.GetKeyDown(KeyCode.T);
+            return Input.GetKeyDown(KeyCode.T);
 #endif
         }
 
@@ -840,7 +947,7 @@ namespace Contrast.Core
             Keyboard kb = Keyboard.current;
             return kb != null && kb.rKey.wasPressedThisFrame;
 #else
-            return UnityEngine.Input.GetKeyDown(KeyCode.R);
+            return Input.GetKeyDown(KeyCode.R);
 #endif
         }
 
@@ -851,7 +958,7 @@ namespace Contrast.Core
             return kb != null &&
                    (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame);
 #else
-            return UnityEngine.Input.GetKeyDown(KeyCode.Return) || UnityEngine.Input.GetKeyDown(KeyCode.KeypadEnter);
+            return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
 #endif
         }
 
@@ -862,7 +969,7 @@ namespace Contrast.Core
             return kb != null &&
                    (kb.rKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame);
 #else
-            return UnityEngine.Input.GetKeyDown(KeyCode.R) || UnityEngine.Input.GetKeyDown(KeyCode.Return);
+            return Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.Return);
 #endif
         }
     }

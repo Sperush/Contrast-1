@@ -1,0 +1,18 @@
+{
+  "version": 2,
+  "idleRevision": 2,
+  "mode": "PointMark",
+  "clipAlias": "ChonDiem",
+  "frameCount": 32,
+  "columns": 8,
+  "cellSize": 256,
+  "duration": 0.60,
+  "fps": 53.333333333333336,
+  "pivot": [
+    0.5,
+    0.125
+  ],
+  "pixelsPerUnit": 128,
+  "rootMotion": false,
+  "view": "three-quarter-side"
+}

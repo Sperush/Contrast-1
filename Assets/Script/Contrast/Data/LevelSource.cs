@@ -93,9 +93,9 @@ namespace Contrast.Data
             switch (SourceType)
             {
                 case LevelSourceType.PackagedResource:
-                    return "[PackagedResource] " + ResourcePath;
+                    return $"[PackagedResource] {ResourcePath}";
                 case LevelSourceType.FilePath:
-                    return "[FilePath] " + FilePath;
+                    return $"[FilePath] {FilePath}";
                 default:
                     return "[InMemoryJson]";
             }
