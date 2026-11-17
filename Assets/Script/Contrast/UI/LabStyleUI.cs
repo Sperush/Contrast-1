@@ -78,51 +78,53 @@ namespace Contrast.UI
         private static Sprite pointerRightSprite;
         private static readonly Dictionary<IconKind, Sprite> iconCache = new Dictionary<IconKind, Sprite>();
 
+        private static bool IsValid(Sprite s) => s != null && s.texture != null;
+
         public static Sprite GetCardSprite()
         {
-            if (cardSprite == null)
+            if (!IsValid(cardSprite))
                 cardSprite = CreateRoundedBoxSprite(96, 96, 20f, 2.0f, CardTop, CardBottom, CardBorder, 24);
             return cardSprite;
         }
 
         public static Sprite GetPillSprite()
         {
-            if (pillSprite == null)
+            if (!IsValid(pillSprite))
                 pillSprite = CreateRoundedBoxSprite(96, 64, 30f, 1.8f, PillTop, PillBottom, PillBorder, 31);
             return pillSprite;
         }
 
         public static Sprite GetPrimaryButtonSprite()
         {
-            if (primaryBtnSprite == null)
+            if (!IsValid(primaryBtnSprite))
                 primaryBtnSprite = CreateRoundedBoxSprite(96, 64, 13f, 1.8f, PrimaryTop, PrimaryBottom, PrimaryBorder, 18);
             return primaryBtnSprite;
         }
 
         public static Sprite GetSecondaryButtonSprite()
         {
-            if (secondaryBtnSprite == null)
+            if (!IsValid(secondaryBtnSprite))
                 secondaryBtnSprite = CreateRoundedBoxSprite(96, 64, 13f, 1.6f, SecondaryTop, SecondaryBottom, SecondaryBorder, 18);
             return secondaryBtnSprite;
         }
 
         public static Sprite GetDangerButtonSprite()
         {
-            if (dangerBtnSprite == null)
+            if (!IsValid(dangerBtnSprite))
                 dangerBtnSprite = CreateRoundedBoxSprite(96, 64, 13f, 1.6f, DangerTop, DangerBottom, DangerBorder, 18);
             return dangerBtnSprite;
         }
 
         public static Sprite GetRecessedSlotSprite()
         {
-            if (slotSprite == null)
+            if (!IsValid(slotSprite))
                 slotSprite = CreateRoundedBoxSprite(80, 48, 10f, 1.4f, SlotTop, SlotBottom, SlotBorder, 14);
             return slotSprite;
         }
 
         public static Sprite GetTopDockSprite()
         {
-            if (topDockSprite == null)
+            if (!IsValid(topDockSprite))
                 topDockSprite = CreateRoundedBoxSprite(96, 64, 18f, 1.6f,
                     new Color(0.145f, 0.196f, 0.278f, 0.95f),
                     new Color(0.102f, 0.141f, 0.208f, 0.97f),
@@ -132,21 +134,21 @@ namespace Contrast.UI
 
         public static Sprite GetCircleButtonSprite()
         {
-            if (circleBtnSprite == null)
+            if (!IsValid(circleBtnSprite))
                 circleBtnSprite = CreateCircleBadgeSprite(80, 2.2f, CircleFillTop, CircleFillBottom, CircleRim);
             return circleBtnSprite;
         }
 
         public static Sprite GetSoftCircleSprite()
         {
-            if (softCircleSprite == null)
+            if (!IsValid(softCircleSprite))
                 softCircleSprite = CreateCircleBadgeSprite(64, 0f, Color.white, Color.white, Color.white);
             return softCircleSprite;
         }
 
         public static Sprite GetPointerRightSprite()
         {
-            if (pointerRightSprite != null)
+            if (IsValid(pointerRightSprite))
                 return pointerRightSprite;
 
             const int w = 32, h = 40;
@@ -174,6 +176,7 @@ namespace Contrast.UI
             }
             tex.Apply();
             pointerRightSprite = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(0.5f, 0.5f), 64f);
+            pointerRightSprite.hideFlags = HideFlags.DontSave;
             return pointerRightSprite;
         }
 
@@ -456,7 +459,9 @@ namespace Contrast.UI
             tex.Apply();
 
             Vector4 border = new Vector4(sliceBorder, sliceBorder, sliceBorder, sliceBorder);
-            return Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
+            Sprite sp = Sprite.Create(tex, new Rect(0, 0, width, height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, border);
+            sp.hideFlags = HideFlags.DontSave;
+            return sp;
         }
 
         private static Sprite CreateCircleBadgeSprite(
@@ -510,12 +515,14 @@ namespace Contrast.UI
 
             tex.SetPixels(pixels);
             tex.Apply();
-            return Sprite.Create(tex, new Rect(0, 0, diameter, diameter), new Vector2(0.5f, 0.5f), 100f);
+            Sprite sp = Sprite.Create(tex, new Rect(0, 0, diameter, diameter), new Vector2(0.5f, 0.5f), 100f);
+            sp.hideFlags = HideFlags.DontSave;
+            return sp;
         }
 
         public static Sprite GetIconSprite(IconKind kind)
         {
-            if (iconCache.TryGetValue(kind, out Sprite cached) && cached != null)
+            if (iconCache.TryGetValue(kind, out Sprite cached) && IsValid(cached))
                 return cached;
 
             const int size = 64;
@@ -629,6 +636,7 @@ namespace Contrast.UI
             tex.Apply();
 
             Sprite sp = Sprite.Create(tex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f);
+            sp.hideFlags = HideFlags.DontSave;
             iconCache[kind] = sp;
             return sp;
         }

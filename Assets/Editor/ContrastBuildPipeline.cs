@@ -19,14 +19,249 @@ namespace Contrast.Build
     /// </summary>
     public static class ContrastBuildPipeline
     {
+        public const string MainMenuScenePath = "Assets/Scenes/MainMenuScene.unity";
+        public const string GameplayScenePath = "Assets/Scenes/GameplayScene.unity";
         public const string GameScenePath = "Assets/Scenes/SampleScene.unity";
         public const string EditorScenePath = "Assets/Scenes/LevelEditorScene.unity";
+
+        public static string[] GetGameBuildScenes()
+        {
+            var list = new System.Collections.Generic.List<string>();
+            if (File.Exists(MainMenuScenePath))
+                list.Add(MainMenuScenePath);
+            if (File.Exists(GameplayScenePath))
+                list.Add(GameplayScenePath);
+            if (File.Exists(GameScenePath))
+                list.Add(GameScenePath);
+            return list.ToArray();
+        }
+
+        [MenuItem("Contrast/Scenes/0. Open Both MainMenu & Gameplay In Hierarchy (Edit Mode)")]
+        public static void OpenAndBakeDualScenesInHierarchy()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+                return;
+
+            // 1. Open MainMenuScene and ensure full MainMenuUI Canvas hierarchy is saved in the scene
+            if (File.Exists(MainMenuScenePath))
+            {
+                Scene menuScene = EditorSceneManager.OpenScene(MainMenuScenePath, OpenSceneMode.Single);
+                SceneManager.SetActiveScene(menuScene);
+
+                var menuUI = FindComponentInScene<Contrast.UI.MainMenuUI>(menuScene);
+                if (menuUI == null)
+                {
+                    GameObject go = new GameObject("MainMenuUI");
+                    SceneManager.MoveGameObjectToScene(go, menuScene);
+                    menuUI = go.AddComponent<Contrast.UI.MainMenuUI>();
+                }
+
+                bool neededBake = menuUI.transform.Find("Canvas/Panel") == null;
+                menuUI.RebuildMenuUIInScene();
+                if (neededBake)
+                {
+                    EditorSceneManager.MarkSceneDirty(menuScene);
+                    EditorSceneManager.SaveScene(menuScene);
+                }
+            }
+
+            // 2. Open GameplayScene additively so BOTH MainMenuScene and GameplayScene appear in Hierarchy
+            if (File.Exists(GameplayScenePath))
+            {
+                Scene gameplayScene = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Additive);
+                Scene prevActive = SceneManager.GetActiveScene();
+                SceneManager.SetActiveScene(gameplayScene);
+
+                bool dirtyGameplay = EnsureGameplaySceneObjectsBaked(gameplayScene);
+                if (dirtyGameplay)
+                {
+                    EditorSceneManager.MarkSceneDirty(gameplayScene);
+                    EditorSceneManager.SaveScene(gameplayScene);
+                }
+
+                if (prevActive.IsValid())
+                    SceneManager.SetActiveScene(prevActive);
+            }
+        }
+
+        private static bool EnsureGameplaySceneObjectsBaked(Scene gameplayScene)
+        {
+            bool changed = false;
+            var gm = FindComponentInScene<Contrast.Core.GameManager>(gameplayScene);
+            var loader = FindComponentInScene<Contrast.Level.LevelLoader>(gameplayScene);
+
+            var ctrlUI = FindComponentInScene<Contrast.UI.GameControlUI>(gameplayScene);
+            if (ctrlUI == null)
+            {
+                GameObject go = new GameObject("GameControlUI");
+                SceneManager.MoveGameObjectToScene(go, gameplayScene);
+                ctrlUI = go.AddComponent<Contrast.UI.GameControlUI>();
+                changed = true;
+            }
+            if (ctrlUI.transform.Find("Canvas/Panel") == null)
+                changed = true;
+            ctrlUI.EnsureInitialized();
+            ctrlUI.Show(false);
+
+            var inGameMenu = FindComponentInScene<Contrast.UI.InGameMenuUI>(gameplayScene);
+            if (inGameMenu == null)
+            {
+                GameObject go = new GameObject("InGameMenuUI");
+                SceneManager.MoveGameObjectToScene(go, gameplayScene);
+                inGameMenu = go.AddComponent<Contrast.UI.InGameMenuUI>();
+                changed = true;
+            }
+            if (inGameMenu.transform.Find("Canvas/Panel") == null)
+                changed = true;
+            inGameMenu.EnsureInitialized();
+            inGameMenu.Show(false);
+
+            var gameOver = FindComponentInScene<Contrast.UI.GameOverUI>(gameplayScene);
+            if (gameOver == null)
+            {
+                GameObject go = new GameObject("GameOverUI");
+                SceneManager.MoveGameObjectToScene(go, gameplayScene);
+                gameOver = go.AddComponent<Contrast.UI.GameOverUI>();
+                changed = true;
+            }
+            if (gameOver.transform.Find("Canvas/Panel") == null)
+                changed = true;
+            gameOver.EnsureInitialized();
+            gameOver.Show(false);
+
+            var loadingUI = FindComponentInScene<Contrast.UI.LoadingOverlayUI>(gameplayScene);
+            if (loadingUI == null)
+            {
+                GameObject go = new GameObject("LoadingOverlayUI");
+                SceneManager.MoveGameObjectToScene(go, gameplayScene);
+                loadingUI = go.AddComponent<Contrast.UI.LoadingOverlayUI>();
+                changed = true;
+            }
+            if (loadingUI.transform.Find("Canvas/Panel") == null)
+                changed = true;
+            loadingUI.EnsureInitialized();
+            loadingUI.Show(false);
+
+            var phaseTuner = FindComponentInScene<Contrast.Presentation.PhaseTunerUI>(gameplayScene);
+            if (phaseTuner == null)
+            {
+                GameObject go = new GameObject("PhaseTunerUI");
+                SceneManager.MoveGameObjectToScene(go, gameplayScene);
+                phaseTuner = go.AddComponent<Contrast.Presentation.PhaseTunerUI>();
+                changed = true;
+            }
+            phaseTuner.EnsureInitialized();
+
+            if (gm != null)
+            {
+                SerializedObject so = new SerializedObject(gm);
+                SetRefIfNull(so, "gameControlUI", ctrlUI, ref changed);
+                SetRefIfNull(so, "inGameMenuUI", inGameMenu, ref changed);
+                SetRefIfNull(so, "gameOverUI", gameOver, ref changed);
+                SetRefIfNull(so, "loadingOverlayUI", loadingUI, ref changed);
+                if (changed)
+                    so.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            if (loader != null)
+            {
+                Transform platformsRoot = null;
+                Transform levelObjectsRoot = null;
+                foreach (GameObject rootGo in gameplayScene.GetRootGameObjects())
+                {
+                    if (rootGo.name == "PlatformsRoot") platformsRoot = rootGo.transform;
+                    if (rootGo.name == "LevelObjectsRoot") levelObjectsRoot = rootGo.transform;
+                }
+                if (platformsRoot == null)
+                {
+                    GameObject go = new GameObject("PlatformsRoot");
+                    SceneManager.MoveGameObjectToScene(go, gameplayScene);
+                    platformsRoot = go.transform;
+                    changed = true;
+                }
+                if (levelObjectsRoot == null)
+                {
+                    GameObject go = new GameObject("LevelObjectsRoot");
+                    SceneManager.MoveGameObjectToScene(go, gameplayScene);
+                    levelObjectsRoot = go.transform;
+                    changed = true;
+                }
+                SerializedObject loaderSo = new SerializedObject(loader);
+                SetRefIfNull(loaderSo, "platformsRoot", platformsRoot, ref changed);
+                SetRefIfNull(loaderSo, "levelObjectsRoot", levelObjectsRoot, ref changed);
+                if (changed)
+                    loaderSo.ApplyModifiedPropertiesWithoutUndo();
+            }
+
+            return changed;
+        }
+
+        private static void SetRefIfNull(SerializedObject so, string propName, UnityEngine.Object target, ref bool changed)
+        {
+            SerializedProperty prop = so.FindProperty(propName);
+            if (prop != null && prop.objectReferenceValue == null && target != null)
+            {
+                prop.objectReferenceValue = target;
+                changed = true;
+            }
+        }
+
+        private static T FindComponentInScene<T>(Scene scene) where T : Component
+        {
+            if (!scene.IsValid() || !scene.isLoaded)
+                return null;
+            GameObject[] roots = scene.GetRootGameObjects();
+            for (int i = 0; i < roots.Length; i++)
+            {
+                T found = roots[i].GetComponentInChildren<T>(true);
+                if (found != null)
+                    return found;
+            }
+            return null;
+        }
+
+        [MenuItem("Contrast/Scenes/1. Open Main Menu Scene (MainMenuScene)")]
+        public static void OpenMainMenuSceneInEditor()
+        {
+            if (File.Exists(MainMenuScenePath))
+            {
+                EditorSceneManager.OpenScene(MainMenuScenePath, OpenSceneMode.Single);
+                var menuUI = UnityEngine.Object.FindAnyObjectByType<Contrast.UI.MainMenuUI>();
+                if (menuUI != null)
+                {
+                    menuUI.EnsureInitialized();
+                    menuUI.Show(true);
+                }
+            }
+        }
+
+        [MenuItem("Contrast/Scenes/2. Open Gameplay Scene (GameplayScene)")]
+        public static void OpenGameplaySceneInEditor()
+        {
+            if (File.Exists(GameplayScenePath))
+            {
+                Scene gp = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Single);
+                EnsureGameplaySceneObjectsBaked(gp);
+            }
+        }
+
+        [MenuItem("Contrast/Scenes/3. Open Level Editor Scene (LevelEditorScene)")]
+        public static void OpenLevelEditorSceneInEditor()
+        {
+            if (File.Exists(EditorScenePath))
+            {
+                EditorSceneManager.OpenScene(EditorScenePath, OpenSceneMode.Single);
+            }
+        }
 
         [InitializeOnLoadMethod]
         private static void EnsureMainGameSceneOpenedInEditor()
         {
             if (Application.isBatchMode)
                 return;
+
+            EditorApplication.playModeStateChanged -= HandlePlayModeStateChanged;
+            EditorApplication.playModeStateChanged += HandlePlayModeStateChanged;
 
             EditorApplication.delayCall += () =>
             {
@@ -42,15 +277,61 @@ namespace Contrast.Build
                     return;
 
                 Scene activeScene = SceneManager.GetActiveScene();
-                if (string.IsNullOrEmpty(activeScene.path) || activeScene.path != GameScenePath)
+                bool hasMenuLoaded = SceneManager.GetSceneByPath(MainMenuScenePath).isLoaded;
+                bool hasGameplayLoaded = SceneManager.GetSceneByPath(GameplayScenePath).isLoaded;
+
+                if (activeScene.path == GameScenePath || (!hasMenuLoaded && !hasGameplayLoaded && activeScene.path != EditorScenePath))
                 {
-                    if (File.Exists(GameScenePath))
+                    OpenAndBakeDualScenesInHierarchy();
+                }
+                else if (hasMenuLoaded && !hasGameplayLoaded && File.Exists(GameplayScenePath))
+                {
+                    OpenAndBakeDualScenesInHierarchy();
+                }
+                else if (hasMenuLoaded)
+                {
+                    Scene menuScene = SceneManager.GetSceneByPath(MainMenuScenePath);
+                    var menuUI = FindComponentInScene<Contrast.UI.MainMenuUI>(menuScene);
+                    if (menuUI != null)
                     {
-                        Debug.Log($"[EDITOR_BOOT] Automatically opening main gameplay scene: {GameScenePath}");
-                        EditorSceneManager.OpenScene(GameScenePath, OpenSceneMode.Single);
+                        // Refresh bindings & upgrade interference labels in-place without overwriting user's scene edits
+                        menuUI.RebuildMenuUIInScene();
+                    }
+                    if (hasGameplayLoaded)
+                    {
+                        Scene gpScene = SceneManager.GetSceneByPath(GameplayScenePath);
+                        EnsureGameplaySceneObjectsBaked(gpScene);
                     }
                 }
             };
+        }
+
+        private static void HandlePlayModeStateChanged(PlayModeStateChange state)
+        {
+            if (state == PlayModeStateChange.ExitingEditMode)
+            {
+                EditorSceneManager.SaveOpenScenes();
+                if (SceneManager.sceneCount > 1)
+                {
+                    Scene active = SceneManager.GetActiveScene();
+                    for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
+                    {
+                        Scene s = SceneManager.GetSceneAt(i);
+                        if (s != active && s.isLoaded)
+                        {
+                            EditorSceneManager.CloseScene(s, true);
+                        }
+                    }
+                }
+            }
+            else if (state == PlayModeStateChange.EnteredEditMode)
+            {
+                EditorApplication.delayCall += () =>
+                {
+                    if (!EditorApplication.isPlayingOrWillChangePlaymode)
+                        OpenAndBakeDualScenesInHierarchy();
+                };
+            }
         }
 
         public static readonly string ProjectRoot = Path.GetFullPath(Path.Combine(Application.dataPath, ".."));
@@ -118,7 +399,7 @@ namespace Contrast.Build
 
             BuildPlayerOptions opt = new BuildPlayerOptions
             {
-                scenes = new[] { GameScenePath },
+                scenes = GetGameBuildScenes(),
                 locationPathName = exePath,
                 target = BuildTarget.StandaloneWindows64,
                 targetGroup = BuildTargetGroup.Standalone,
@@ -177,7 +458,7 @@ namespace Contrast.Build
 
             BuildPlayerOptions opt = new BuildPlayerOptions
             {
-                scenes = new[] { GameScenePath },
+                scenes = GetGameBuildScenes(),
                 locationPathName = exePath,
                 target = BuildTarget.StandaloneWindows64,
                 targetGroup = BuildTargetGroup.Standalone,
@@ -233,7 +514,7 @@ namespace Contrast.Build
 
             BuildPlayerOptions opt = new BuildPlayerOptions
             {
-                scenes = new[] { GameScenePath },
+                scenes = GetGameBuildScenes(),
                 locationPathName = exePath,
                 target = BuildTarget.StandaloneWindows64,
                 targetGroup = BuildTargetGroup.Standalone,
@@ -291,7 +572,7 @@ namespace Contrast.Build
 
             BuildPlayerOptions opt = new BuildPlayerOptions
             {
-                scenes = new[] { GameScenePath },
+                scenes = GetGameBuildScenes(),
                 locationPathName = exePath,
                 target = BuildTarget.StandaloneWindows64,
                 targetGroup = BuildTargetGroup.Standalone,
@@ -366,7 +647,7 @@ namespace Contrast.Build
 
             BuildPlayerOptions opt = new BuildPlayerOptions
             {
-                scenes = new[] { GameScenePath },
+                scenes = GetGameBuildScenes(),
                 locationPathName = apkPath,
                 target = BuildTarget.Android,
                 targetGroup = BuildTargetGroup.Android,
@@ -423,6 +704,8 @@ namespace Contrast.Build
             // Register scenes in EditorBuildSettings
             EditorBuildSettings.scenes = new[]
             {
+                new EditorBuildSettingsScene(MainMenuScenePath, true),
+                new EditorBuildSettingsScene(GameplayScenePath, true),
                 new EditorBuildSettingsScene(GameScenePath, true),
                 new EditorBuildSettingsScene(EditorScenePath, true)
             };

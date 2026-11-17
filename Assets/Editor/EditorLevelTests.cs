@@ -3955,12 +3955,12 @@ namespace Contrast.Tests
             pvp.SyncVisualsNow();
 
             // F1_01: Loaded frames & Animator setup
-            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Idle") == 120,
-                "Anim_F1_01_IdleFrameCount120", "Idle clip has 120 frames");
-            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Run") == 32,
-                "Anim_F1_01_RunFrameCount32", "Run clip has 32 frames");
-            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Jump") == 61,
-                "Anim_F1_01_JumpFrameCount61", "Jump clip has 61 frames");
+            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Idle") == Contrast.Presentation.PlayerVisualPresentation.IdleFrameCount,
+                "Anim_F1_01_IdleFrameCount110", $"Idle clip has {Contrast.Presentation.PlayerVisualPresentation.IdleFrameCount} frames");
+            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Run") == Contrast.Presentation.PlayerVisualPresentation.RunFrameCount,
+                "Anim_F1_01_RunFrameCount28", $"Run clip has {Contrast.Presentation.PlayerVisualPresentation.RunFrameCount} frames");
+            AssertTrue(Contrast.Presentation.PlayerVisualPresentation.GetFrameCount("Jump") == Contrast.Presentation.PlayerVisualPresentation.JumpFrameCount,
+                "Anim_F1_01_JumpFrameCount61", $"Jump clip has {Contrast.Presentation.PlayerVisualPresentation.JumpFrameCount} frames");
             AssertTrue(pvp.CharacterAnimator != null && !pvp.CharacterAnimator.applyRootMotion,
                 "Anim_F1_02_RootMotionDisabled", "Animator component exists on visual root with applyRootMotion == false");
 
@@ -4044,6 +4044,24 @@ namespace Contrast.Tests
             pvp.AdvanceAnimation(0.25f);
             AssertTrue(pvp.CurrentAnimationState == Contrast.Presentation.PlayerAnimationState.Idle,
                 "Anim_F1_10_PostLandingReturnsToIdle", "After landing recovery, stationary player returns to Idle");
+
+            // Verify Config.Instance.enableTest (true vs false) gating PlayerController.SetTestMode and PlayerInput test shortcuts
+            bool prevEnableTest = Contrast.Core.Config.Instance.enableTest;
+            try
+            {
+                Contrast.Core.Config.Instance.enableTest = true;
+                pc.SetTestMode(true);
+                AssertTrue(pc.IsTestModeActive, "Config_EnableTestTrue_AllowsTestMode", "When Config.Instance.enableTest == true, SetTestMode(true) activates test mode");
+                pc.SetTestMode(false);
+
+                Contrast.Core.Config.Instance.enableTest = false;
+                pc.SetTestMode(true);
+                AssertTrue(!pc.IsTestModeActive, "Config_EnableTestFalse_BlocksTestMode", "When Config.Instance.enableTest == false, SetTestMode(true) is blocked");
+            }
+            finally
+            {
+                Contrast.Core.Config.Instance.enableTest = prevEnableTest;
+            }
 
             // F1_11: Death & Respawn animation state transitions
             pc.transform.position = new Vector3(0f, -30f, 0f);

@@ -35,8 +35,106 @@ namespace Contrast.UI
         {
             if (panel != null)
                 return;
+
             EnsureEventSystem();
+
+            Transform existingPanel = transform.Find("Canvas/Panel");
+            if (existingPanel != null && TryBindExistingUI(existingPanel))
+                return;
+
+            Transform staleCanvas = transform.Find("Canvas");
+            if (staleCanvas != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(staleCanvas.gameObject);
+                else
+                    DestroyImmediate(staleCanvas.gameObject);
+            }
+
             BuildUI();
+        }
+
+        private bool TryBindExistingUI(Transform existingPanel)
+        {
+            panel = existingPanel.gameObject;
+            Transform dock = existingPanel.Find("TopLabDock");
+            if (dock != null)
+            {
+                Image dockBg = dock.GetComponent<Image>();
+                if (dockBg != null)
+                    LabStyleUI.ApplySlicedSprite(dockBg, LabStyleUI.GetTopDockSprite(), false);
+                Transform groove = dock.Find("GrooveTrack");
+                if (groove != null)
+                {
+                    Image gBg = groove.GetComponent<Image>();
+                    if (gBg != null)
+                    {
+                        Color c = gBg.color;
+                        LabStyleUI.ApplySlicedSprite(gBg, LabStyleUI.GetRecessedSlotSprite(), false);
+                        gBg.color = c;
+                    }
+                    Transform fill = groove.Find("GrooveFill");
+                    if (fill != null)
+                    {
+                        grooveFillRt = fill.GetComponent<RectTransform>();
+                        Image fImg = fill.GetComponent<Image>();
+                        if (fImg != null)
+                            LabStyleUI.ApplySlicedSprite(fImg, LabStyleUI.GetPrimaryButtonSprite(), false);
+                    }
+                }
+            }
+
+            BindActionButton(existingPanel, "BackPillButton", LabStyleUI.GetPillSprite(), LabStyleUI.IconKind.ChevronLeft, OnMenuClicked, false);
+            BindActionButton(existingPanel, "FullscreenButton", LabStyleUI.GetCircleButtonSprite(), LabStyleUI.IconKind.Fullscreen, OnFullscreenClicked, true);
+            BindActionButton(existingPanel, "RETRYButton", LabStyleUI.GetCircleButtonSprite(), LabStyleUI.IconKind.Retry, OnRetryClicked, true);
+            BindActionButton(existingPanel, "RESTARTButton", LabStyleUI.GetCircleButtonSprite(), LabStyleUI.IconKind.Restart, OnRestartClicked, true);
+            BindActionButton(existingPanel, "GuideButton", LabStyleUI.GetCircleButtonSprite(), LabStyleUI.IconKind.GuideBook, OnGuideClicked, true);
+            BindActionButton(existingPanel, "MENUButton", LabStyleUI.GetCircleButtonSprite(), LabStyleUI.IconKind.MenuBars, OnMenuClicked, true);
+
+            return grooveFillRt != null;
+        }
+
+        private static void BindActionButton(
+            Transform parent,
+            string name,
+            Sprite bgSprite,
+            LabStyleUI.IconKind iconKind,
+            UnityEngine.Events.UnityAction onClick,
+            bool isCircle = false)
+        {
+            Transform tr = parent.Find(name);
+            if (tr == null) return;
+            if (isCircle)
+            {
+                Transform cBg = tr.Find("CircleBg");
+                if (cBg != null)
+                {
+                    Image img = cBg.GetComponent<Image>();
+                    if (img != null)
+                    {
+                        img.sprite = bgSprite;
+                        img.type = Image.Type.Simple;
+                    }
+                    Image icImg = cBg.Find("Icon")?.GetComponent<Image>();
+                    if (icImg != null)
+                        icImg.sprite = LabStyleUI.GetIconSprite(iconKind);
+                }
+            }
+            else
+            {
+                Image img = tr.GetComponent<Image>();
+                if (img != null)
+                    LabStyleUI.ApplySlicedSprite(img, bgSprite, false);
+                Image icImg = (tr.Find("Chevron") ?? tr.Find("Icon"))?.GetComponent<Image>();
+                if (icImg != null)
+                    icImg.sprite = LabStyleUI.GetIconSprite(iconKind);
+            }
+            Button btn = tr.GetComponent<Button>();
+            if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(onClick);
+            }
         }
 
         public void Show(bool visible)
@@ -78,7 +176,13 @@ namespace Contrast.UI
         {
             EventSystem.current?.SetSelectedGameObject(null);
             ContrastAudioManager.Instance?.PlayButtonClick();
-            PhaseTunerUI.Instance?.ToggleUserGuide();
+            PhaseTunerUI tuner = PhaseTunerUI.Instance ?? FindAnyObjectByType<PhaseTunerUI>();
+            if (tuner == null)
+            {
+                GameObject go = new GameObject("PhaseTunerUI");
+                tuner = go.AddComponent<PhaseTunerUI>();
+            }
+            tuner.ToggleUserGuide();
         }
 
         private void Update()

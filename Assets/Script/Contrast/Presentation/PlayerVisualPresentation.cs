@@ -51,21 +51,23 @@ namespace Contrast.Presentation
         public const float MaxAnimatedVisualHeight = CropHeightPx / PixelsPerUnit;  // 1.6015625 units
         public static readonly Vector2 VisualPivot = new Vector2(0.5f, 0.0f);
 
-        // Clip timing constants (from Idle.json, Run.json, Jump.json, Celebrate.json)
-        public const int IdleFrameCount = 120;
-        public const int RunFrameCount = 32;
+        // Clip timing constants (from SilhouetteMotion v2 Idle.json, Run.json, Jump.json, Celebrate.json, PointMark.json)
+        public const int IdleFrameCount = 110;
+        public const int RunFrameCount = 28;
         public const int JumpFrameCount = 61;
         public const int CelebrateFrameCount = 32;
+        public const int PointMarkFrameCount = 32;
 
-        public const float IdleDuration = 2.40f;
-        public const float RunDuration = 0.64f;
+        public const float IdleDuration = 2.20f;
+        public const float RunDuration = 0.56f;
         public const float CelebrateDuration = 0.64f;
-        public const float JumpAnticipationDuration = 0.06f;
-        public const float JumpAirDuration = 0.70f;
+        public const float PointMarkDuration = 0.60f;
+        public const float JumpAnticipationDuration = 0.07f;
+        public const float JumpAirDuration = 0.64f;
         public const float JumpLandingDuration = 0.18f;
-        public const float JumpRestDuration = 0.28f;
-        public const float JumpTotalDuration = JumpAnticipationDuration + JumpAirDuration + JumpLandingDuration + JumpRestDuration; // 1.22s
-        public const float ReferenceJumpSpeed = 8.2f;
+        public const float JumpRestDuration = 0.32f;
+        public const float JumpTotalDuration = JumpAnticipationDuration + JumpAirDuration + JumpLandingDuration + JumpRestDuration; // 1.21s
+        public const float ReferenceJumpSpeed = 7.4f;
 
         private PlayerController player;
         private SpriteRenderer rawSpriteRenderer;
@@ -134,11 +136,13 @@ namespace Contrast.Presentation
         private static Sprite[] cachedRunBodyFrames;
         private static Sprite[] cachedJumpBodyFrames;
         private static Sprite[] cachedCelebrateBodyFrames;
+        private static Sprite[] cachedPointMarkBodyFrames;
 
         private static Sprite[] cachedIdleRimFrames;
         private static Sprite[] cachedRunRimFrames;
         private static Sprite[] cachedJumpRimFrames;
         private static Sprite[] cachedCelebrateRimFrames;
+        private static Sprite[] cachedPointMarkRimFrames;
 
         private static Sprite cachedHaloSprite;
         private static Sprite cachedCoreSprite;
@@ -175,6 +179,7 @@ namespace Contrast.Presentation
                 "Run" => cachedRunBodyFrames != null ? cachedRunBodyFrames.Length : 0,
                 "Jump" => cachedJumpBodyFrames != null ? cachedJumpBodyFrames.Length : 0,
                 "Celebrate" or "AnMung" => cachedCelebrateBodyFrames != null ? cachedCelebrateBodyFrames.Length : 0,
+                "PointMark" or "ChonDiem" => cachedPointMarkBodyFrames != null ? cachedPointMarkBodyFrames.Length : 0,
                 _ => 0
             };
         }
@@ -686,13 +691,16 @@ namespace Contrast.Presentation
         {
             EnsureSilhouetteFramesLoaded();
             bool isCelebrate = mode == "Celebrate" || mode == "AnMung";
+            bool isPointMark = mode == "PointMark" || mode == "ChonDiem";
             Sprite[] frames = mode == "Idle"
                 ? cachedIdleBodyFrames
                 : mode == "Run"
                     ? cachedRunBodyFrames
                     : isCelebrate
                         ? cachedCelebrateBodyFrames
-                        : cachedJumpBodyFrames;
+                        : isPointMark
+                            ? cachedPointMarkBodyFrames
+                            : cachedJumpBodyFrames;
 
             float duration = mode == "Idle"
                 ? IdleDuration
@@ -700,7 +708,9 @@ namespace Contrast.Presentation
                     ? RunDuration
                     : isCelebrate
                         ? CelebrateDuration
-                        : JumpTotalDuration;
+                        : isPointMark
+                            ? PointMarkDuration
+                            : JumpTotalDuration;
 
             if (frames == null || frames.Length == 0)
             {
@@ -718,13 +728,16 @@ namespace Contrast.Presentation
         {
             EnsureSilhouetteFramesLoaded();
             bool isCelebrate = mode == "Celebrate" || mode == "AnMung";
+            bool isPointMark = mode == "PointMark" || mode == "ChonDiem";
             Sprite[] frames = mode == "Idle"
                 ? cachedIdleRimFrames
                 : mode == "Run"
                     ? cachedRunRimFrames
                     : isCelebrate
                         ? cachedCelebrateRimFrames
-                        : cachedJumpRimFrames;
+                        : isPointMark
+                            ? cachedPointMarkRimFrames
+                            : cachedJumpRimFrames;
 
             if (frames == null || frames.Length == 0)
                 return null;
@@ -733,12 +746,21 @@ namespace Contrast.Presentation
             return frames[safeIndex];
         }
 
+        private static bool AreFramesValid(Sprite[] frames, int expectedCount)
+        {
+            return frames != null &&
+                   frames.Length == expectedCount &&
+                   frames[0] != null &&
+                   frames[0].texture != null;
+        }
+
         private static void EnsureSilhouetteFramesLoaded()
         {
-            if (cachedIdleBodyFrames != null && cachedIdleBodyFrames.Length == IdleFrameCount && cachedIdleBodyFrames[0] != null &&
-                cachedRunBodyFrames != null && cachedRunBodyFrames.Length == RunFrameCount && cachedRunBodyFrames[0] != null &&
-                cachedJumpBodyFrames != null && cachedJumpBodyFrames.Length == JumpFrameCount && cachedJumpBodyFrames[0] != null &&
-                cachedCelebrateBodyFrames != null && cachedCelebrateBodyFrames.Length == CelebrateFrameCount && cachedCelebrateBodyFrames[0] != null)
+            if (AreFramesValid(cachedIdleBodyFrames, IdleFrameCount) &&
+                AreFramesValid(cachedRunBodyFrames, RunFrameCount) &&
+                AreFramesValid(cachedJumpBodyFrames, JumpFrameCount) &&
+                AreFramesValid(cachedCelebrateBodyFrames, CelebrateFrameCount) &&
+                AreFramesValid(cachedPointMarkBodyFrames, PointMarkFrameCount))
             {
                 return;
             }
@@ -747,6 +769,7 @@ namespace Contrast.Presentation
             SliceSheetOrFallback("Run", RunFrameCount, out cachedRunBodyFrames, out cachedRunRimFrames);
             SliceSheetOrFallback("Jump", JumpFrameCount, out cachedJumpBodyFrames, out cachedJumpRimFrames);
             SliceSheetOrFallback("Celebrate", CelebrateFrameCount, out cachedCelebrateBodyFrames, out cachedCelebrateRimFrames);
+            SliceSheetOrFallback("PointMark", PointMarkFrameCount, out cachedPointMarkBodyFrames, out cachedPointMarkRimFrames);
         }
 
         private static void SliceSheetOrFallback(
@@ -798,7 +821,8 @@ namespace Contrast.Presentation
                     int cropMinX = Mathf.RoundToInt(CropMinXPx * sheetScale);
                     int cropMinY = Mathf.RoundToInt(CropMinYBottomPx * sheetScale);
                     int cropW = Mathf.Max(8, Mathf.RoundToInt(CropWidthPx * sheetScale));
-                    int cropH = Mathf.Max(8, Mathf.RoundToInt(CropHeightPx * sheetScale));
+                    // SilhouetteMotion v2 reaches y_bottom = 241 (head crown), so slice 212 px above baseline 32 (y in [32..244))
+                    int cropH = Mathf.Max(8, Mathf.RoundToInt(212 * sheetScale));
                     float effectivePpu = PixelsPerUnit * sheetScale;
 
                     Color32[] bodyPixels = new Color32[srcPixels.Length];
@@ -893,6 +917,7 @@ namespace Contrast.Presentation
                             0,
                             SpriteMeshType.FullRect);
                         bodyFrames[i].name = $"{mode}_{i:D3}";
+                        bodyFrames[i].hideFlags = HideFlags.DontSave;
 
                         rimFrames[i] = Sprite.Create(
                             rimTex,
@@ -902,6 +927,7 @@ namespace Contrast.Presentation
                             0,
                             SpriteMeshType.FullRect);
                         rimFrames[i].name = $"{mode}_Rim_{i:D3}";
+                        rimFrames[i].hideFlags = HideFlags.DontSave;
                     }
                     return;
                 }

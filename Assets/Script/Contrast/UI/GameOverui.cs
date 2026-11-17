@@ -31,9 +31,76 @@ namespace Contrast.UI
 
         private void Awake()
         {
-            EnsureEventSystem();
-            BuildUI();
+            EnsureInitialized();
             ShowResult(false, "GAME OVER", false);
+        }
+
+        public void EnsureInitialized()
+        {
+            if (panel != null)
+                return;
+
+            EnsureEventSystem();
+
+            Transform existingPanel = transform.Find("Canvas/Panel");
+            if (existingPanel != null && TryBindExistingUI(existingPanel))
+                return;
+
+            Transform staleCanvas = transform.Find("Canvas");
+            if (staleCanvas != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(staleCanvas.gameObject);
+                else
+                    DestroyImmediate(staleCanvas.gameObject);
+            }
+
+            BuildUI();
+        }
+
+        private bool TryBindExistingUI(Transform existingPanel)
+        {
+            Transform card = existingPanel.Find("ResultCard");
+            if (card == null)
+                return false;
+
+            panel = existingPanel.gameObject;
+            Image cardBg = card.GetComponent<Image>();
+            if (cardBg != null)
+                LabStyleUI.ApplySlicedSprite(cardBg, LabStyleUI.GetCardSprite(), false);
+
+            Transform badgeGo = card.Find("StatusBadge");
+            if (badgeGo != null)
+            {
+                badgeBg = badgeGo.GetComponent<Image>();
+                if (badgeBg != null)
+                    LabStyleUI.ApplySlicedSprite(badgeBg, LabStyleUI.GetPillSprite(), false);
+                badgeText = badgeGo.Find("BadgeText")?.GetComponent<Text>();
+            }
+
+            titleText = card.Find("Title")?.GetComponent<Text>();
+            subText = card.Find("Subtitle")?.GetComponent<Text>();
+
+            Transform sBox = card.Find("StatsBox");
+            if (sBox != null)
+            {
+                statsBox = sBox.gameObject;
+                Image sBg = statsBox.GetComponent<Image>();
+                if (sBg != null)
+                    LabStyleUI.ApplySlicedSprite(sBg, LabStyleUI.GetRecessedSlotSprite(), false);
+                statsText = sBox.Find("StatsText")?.GetComponent<Text>();
+            }
+
+            Transform btnRow = card.Find("ButtonRow");
+            if (btnRow != null)
+            {
+                retryButton = btnRow.Find("RETRYButton")?.GetComponent<Button>();
+                restartButton = btnRow.Find("RESTARTButton")?.GetComponent<Button>();
+                returnButton = btnRow.Find("RETURNButton")?.GetComponent<Button>();
+            }
+
+            hintLabel = card.Find("KeyboardHint")?.GetComponent<Text>();
+            return retryButton != null && restartButton != null && returnButton != null;
         }
 
         public void Show(bool visible)

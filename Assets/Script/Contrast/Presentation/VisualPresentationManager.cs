@@ -130,6 +130,7 @@ namespace Contrast.Presentation
 
         private void LateUpdate()
         {
+            EnsureSystems();
             DecoratePlayer();
             DecoratePlatforms();
             DecorateMarkers();

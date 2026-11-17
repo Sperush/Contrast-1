@@ -3023,18 +3023,96 @@ namespace ContrastTests
             bool whiteStageSolidForBlack = ColorClassifier.Classify(demoData.platforms[4].rawGrayscaleColor) != col;
             Assert(whiteStageSolidForBlack && apexFromPedestal > whiteStageTop + 0.5f, "DemoLobby_JumpToNewtonStage", $"Jump from Black pedestal ({apexFromPedestal:F2}) clears White Newton stage ({whiteStageTop:F2})");
 
-            // 5. Verify new 2-armed Celebrate / AnMung animation clip constants & sprite sheet assets (no 4-arm bug)
-            Assert(Contrast.Presentation.PlayerVisualPresentation.CelebrateFrameCount == 32 &&
+            // 5. Verify SilhouetteMotion v2 (three-quarter-side), 1-armed PointMark (0.60s), and 2-armed Celebrate / AnMung (0.64s)
+            Assert(Contrast.Presentation.PlayerVisualPresentation.IdleFrameCount == 110 &&
+                   Contrast.Presentation.PlayerVisualPresentation.RunFrameCount == 28 &&
+                   Contrast.Presentation.PlayerVisualPresentation.JumpFrameCount == 61 &&
+                   Contrast.Presentation.PlayerVisualPresentation.CelebrateFrameCount == 32 &&
+                   Contrast.Presentation.PlayerVisualPresentation.PointMarkFrameCount == 32 &&
+                   Math.Abs(Contrast.Presentation.PlayerVisualPresentation.PointMarkDuration - 0.60f) < 1e-4f &&
                    Math.Abs(Contrast.Presentation.PlayerVisualPresentation.CelebrateDuration - 0.64f) < 1e-4f &&
                    (int)Contrast.Presentation.PlayerAnimationState.Celebrate == 6,
                 "DemoLobby_AnMungClipFrameCount32",
-                "PlayerVisualPresentation defines 32-frame 'Celebrate' / 'AnMung' 2-armed celebration animation (0.64s)");
+                "PlayerVisualPresentation defines SilhouetteMotion v2 (Idle=110, Run=28, Jump=61), 1-armed 'PointMark' (32 frames, 0.60s), and 2-armed 'Celebrate'/'AnMung' (32 frames, 0.64s)");
 
             string celebratePng = Path.Combine(Path.GetDirectoryName(pathDemo) ?? "", "..", "SilhouetteMotion", "Sheets", "Celebrate.png");
             string celebrateJson = Path.Combine(Path.GetDirectoryName(pathDemo) ?? "", "..", "SilhouetteMotion", "Sheets", "Celebrate.json");
-            Assert(File.Exists(celebratePng) && File.Exists(celebrateJson) && File.ReadAllText(celebrateJson).Contains("\"frameCount\": 32"),
+            string pointMarkPng = Path.Combine(Path.GetDirectoryName(pathDemo) ?? "", "..", "SilhouetteMotion", "Sheets", "PointMark.png");
+            string pointMarkJson = Path.Combine(Path.GetDirectoryName(pathDemo) ?? "", "..", "SilhouetteMotion", "Sheets", "PointMark.json");
+            string idleJson = Path.Combine(Path.GetDirectoryName(pathDemo) ?? "", "..", "SilhouetteMotion", "Sheets", "Idle.json");
+            Assert(File.Exists(celebratePng) && File.Exists(celebrateJson) &&
+                   File.Exists(pointMarkPng) && File.Exists(pointMarkJson) &&
+                   File.ReadAllText(celebrateJson).Contains("\"frameCount\": 32") &&
+                   File.ReadAllText(pointMarkJson).Contains("\"frameCount\": 32") &&
+                   File.ReadAllText(idleJson).Contains("\"version\": 2") &&
+                   File.ReadAllText(idleJson).Contains("\"frameCount\": 110"),
                 "DemoLobby_CelebrateSheetAssetsExist",
-                "Celebrate.png and Celebrate.json (32 frames) exist in Assets/Resources/SilhouetteMotion/Sheets");
+                "SilhouetteMotion v2 sheets (Idle=110, Run=28, Jump=61), PointMark.png/json (1-arm, 32 frames), and Celebrate.png/json (2-arm, 32 frames) exist in Assets/Resources/SilhouetteMotion/Sheets");
+
+            // 6. Verify 2-Scene Architecture (MainMenuScene.unity + GameplayScene.unity)
+            string assetsRoot = Path.GetFullPath(Path.Combine(Path.GetDirectoryName(pathDemo) ?? "", "..", ".."));
+            string mainMenuSceneFile = Path.Combine(assetsRoot, "Scenes", "MainMenuScene.unity");
+            string gameplaySceneFile = Path.Combine(assetsRoot, "Scenes", "GameplayScene.unity");
+            Assert(File.Exists(mainMenuSceneFile) && File.Exists(gameplaySceneFile) &&
+                   Contrast.Core.GameManager.MainMenuSceneName == "MainMenuScene" &&
+                   Contrast.Core.GameManager.GameplaySceneName == "GameplayScene",
+                "SceneArch_MainMenuAndGameplayScenesExist",
+                "MainMenuScene.unity and GameplayScene.unity exist in Assets/Scenes and are configured on GameManager");
+
+            // 7. Verify Config Singleton enableTest flag (true vs false) gating test shortcuts
+            bool savedEnableTest = Contrast.Core.Config.Instance.enableTest;
+            try
+            {
+                Assert(Contrast.Core.Config.Instance != null &&
+                       ReferenceEquals(Contrast.Core.Config.Instance, Contrast.Core.Config.Instance),
+                    "Config_01_SingletonInstance",
+                    "Config.Instance singleton is non-null and returns the same instance");
+
+                var kbAdapter = new StandaloneKeyboardInputAdapter();
+                Contrast.Core.Config.Instance.enableTest = false;
+                Assert(!Contrast.Core.Config.Instance.enableTest &&
+                       kbAdapter.GetColorChunkStep() == 0 &&
+                       !kbAdapter.TryGetDirectColor(out _),
+                    "Config_02_EnableTestFalseBlocksTestShortcuts",
+                    "When Config.Instance.enableTest == false, test color shortcuts (1/2/3, Up/Down) are blocked");
+
+                // Simulate PlayerInput intent resolution when enableTest == false vs true
+                var mockAdapter = new MockPlatformInputAdapter
+                {
+                    Axis = 1f,
+                    Jump = true,
+                    FastFall = false,
+                    PhaseTuneAxis = -1f,
+                    NewtonMark = true,
+                    ColorStep = 1,
+                    HasDirectColor = true,
+                    DirectColor = LogicalColor.Black
+                };
+                int resolvedColorStepWhenDisabled = Contrast.Core.Config.Instance.enableTest ? mockAdapter.GetColorChunkStep() : 0;
+                bool resolvedDirectColorWhenDisabled = Contrast.Core.Config.Instance.enableTest && mockAdapter.TryGetDirectColor(out _);
+                Assert(resolvedColorStepWhenDisabled == 0 && !resolvedDirectColorWhenDisabled &&
+                       Math.Abs(mockAdapter.GetHorizontalAxis() - 1f) < 1e-5f &&
+                       mockAdapter.GetJumpDown() &&
+                       Math.Abs(mockAdapter.GetPhaseTuneAxis() - (-1f)) < 1e-5f &&
+                       mockAdapter.GetNewtonMarkDown(),
+                    "Config_03_EnableTestFalsePreservesGameplayInputs",
+                    "When Config.Instance.enableTest == false, test inputs are zeroed while gameplay inputs (A/D, Jump, PhaseTune, X) remain active");
+
+                Contrast.Core.Config.Instance.enableTest = true;
+                int resolvedColorStepWhenEnabled = Contrast.Core.Config.Instance.enableTest ? mockAdapter.GetColorChunkStep() : 0;
+                LogicalColor resolvedCol = LogicalColor.Universal;
+                bool resolvedDirectColorWhenEnabled = Contrast.Core.Config.Instance.enableTest && mockAdapter.TryGetDirectColor(out resolvedCol);
+                Assert(Contrast.Core.Config.Instance.enableTest &&
+                       resolvedColorStepWhenEnabled == 1 &&
+                       resolvedDirectColorWhenEnabled &&
+                       resolvedCol == LogicalColor.Black,
+                    "Config_04_EnableTestTrueRestoresTestShortcuts",
+                    "When Config.Instance.enableTest == true, test mode and shortcuts (T, 1/2/3, Up/Down) work normally");
+            }
+            finally
+            {
+                Contrast.Core.Config.Instance.enableTest = savedEnableTest;
+            }
         }
 
         private sealed class MockPlatformInputAdapter : IPlatformInputAdapter

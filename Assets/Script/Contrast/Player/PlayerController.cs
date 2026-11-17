@@ -147,10 +147,18 @@ namespace Contrast.Player
 
         public void SetTestMode(bool enabled)
         {
-            IsTestModeActive = enabled;
+            if (Config.Instance.enableTest)
+            {
+                IsTestModeActive = enabled;
+            }
+            else
+            {
+                IsTestModeActive = false;
+            }
             jumpBufferTimer = 0f;
             coyoteTimer = 0f;
-            if (enabled)
+
+            if (IsTestModeActive)
             {
                 jumpMotion?.ResetMotion();
                 isGrounded = false;
@@ -224,6 +232,11 @@ namespace Contrast.Player
             jumpMotion ??= GetComponent<PlayerJumpMotion>();
             movementResolver ??= GetComponent<PlayerMovementResolver>();
             collisionResolver ??= GetComponent<PlayerCollisionResolver>();
+
+            if (!Config.Instance.enableTest && IsTestModeActive)
+            {
+                SetTestMode(false);
+            }
 
             if (IsTestModeActive)
             {
@@ -327,13 +340,16 @@ namespace Contrast.Player
             {
                 TunePhase(input.PhaseTuneDelta);
             }
-            else if (input.ColorChunkStep != 0)
+            else if (Config.Instance.enableTest)
             {
-                StepColorChunk(input.ColorChunkStep);
-            }
-            else if (input.HasColorChange)
-            {
-                SetColor(input.RequestedColor);
+                if (input.ColorChunkStep != 0)
+                {
+                    StepColorChunk(input.ColorChunkStep);
+                }
+                else if (input.HasColorChange)
+                {
+                    SetColor(input.RequestedColor);
+                }
             }
 
             // Re-evaluate ground support if color/phase change made underlying platform passable or solid
@@ -704,6 +720,11 @@ namespace Contrast.Player
 
         private void Die()
         {
+            if (!Config.Instance.enableTest && IsTestModeActive)
+            {
+                SetTestMode(false);
+            }
+
             if (IsTestModeActive)
                 return;
 

@@ -70,8 +70,16 @@ namespace Contrast.Player
                 phaseTuneAxis = Mathf.Clamp(customAdapter.GetPhaseTuneAxis(), -1f, 1f);
                 newtonMark = customAdapter.GetNewtonMarkDown();
 
-                colorChunkStep = customAdapter.GetColorChunkStep();
-                hasColorChange = customAdapter.TryGetDirectColor(out requestedColor);
+                if (Contrast.Core.Config.Instance.enableTest)
+                {
+                    colorChunkStep = customAdapter.GetColorChunkStep();
+                    hasColorChange = customAdapter.TryGetDirectColor(out requestedColor);
+                }
+                else
+                {
+                    colorChunkStep = 0;
+                    hasColorChange = false;
+                }
                 customAdapter.ResetFrameState();
 
                 float customPhaseDelta = phaseTuneAxis * 2.75f * deltaTime;
@@ -124,20 +132,28 @@ namespace Contrast.Player
 
             float phaseTuneDelta = phaseTuneAxis * 2.75f * deltaTime;
 
-            if (kbColorStep != 0)
-                colorChunkStep = kbColorStep;
-            else if (touchColorStep != 0)
-                colorChunkStep = touchColorStep;
+            if (Contrast.Core.Config.Instance.enableTest)
+            {
+                if (kbColorStep != 0)
+                    colorChunkStep = kbColorStep;
+                else if (touchColorStep != 0)
+                    colorChunkStep = touchColorStep;
 
-            if (kbHasDirectColor)
-            {
-                hasColorChange = true;
-                requestedColor = kbDirectColor;
+                if (kbHasDirectColor)
+                {
+                    hasColorChange = true;
+                    requestedColor = kbDirectColor;
+                }
+                else if (touchHasDirectColor)
+                {
+                    hasColorChange = true;
+                    requestedColor = touchDirectColor;
+                }
             }
-            else if (touchHasDirectColor)
+            else
             {
-                hasColorChange = true;
-                requestedColor = touchDirectColor;
+                colorChunkStep = 0;
+                hasColorChange = false;
             }
 
             // 4. Reset transient frame states

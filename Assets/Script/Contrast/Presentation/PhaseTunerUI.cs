@@ -46,6 +46,8 @@ namespace Contrast.Presentation
         private Text stateBadgeTitle;
         private Text stateBadgeRelation;
         private Image stateBadgeBg;
+        private Image stateBadgeColorIcon;
+        private Outline stateBadgeColorOutline;
 
         // Control hint card
         private GameObject hintPanel;
@@ -54,14 +56,13 @@ namespace Contrast.Presentation
 
         public void ToggleUserGuide()
         {
+            EnsureInitialized();
             userGuideVisible = !userGuideVisible;
             if (hintPanel != null)
             {
                 GameManager gm = GameManager.Instance;
                 bool isPlaying = gm == null || gm.State == GameState.Playing;
-                var newtonCtrl = Contrast.Level.EasyNewtonFinaleController.Instance;
-                bool inNewton = newtonCtrl != null && newtonCtrl.IsZoneActive;
-                hintPanel.SetActive(isPlaying && !inNewton && userGuideVisible);
+                hintPanel.SetActive(isPlaying && userGuideVisible);
             }
         }
 
@@ -85,10 +86,25 @@ namespace Contrast.Presentation
             EnsureInitialized();
         }
 
+        private void OnEnable()
+        {
+            instance = this;
+        }
+
         public void EnsureInitialized()
         {
-            if (tunerPanel != null)
+            if (tunerPanel != null && waveTexture != null && ombreTexture != null)
                 return;
+
+            Transform staleCanvas = transform.Find("ContrastPresentationCanvas");
+            if (staleCanvas != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(staleCanvas.gameObject);
+                else
+                    DestroyImmediate(staleCanvas.gameObject);
+            }
+
             BuildUI();
         }
 
@@ -184,7 +200,7 @@ namespace Contrast.Presentation
             rt.anchorMin = new Vector2(0.5f, 0f);
             rt.anchorMax = new Vector2(0.5f, 0f);
             rt.pivot = new Vector2(0.5f, 0f);
-            rt.sizeDelta = new Vector2(560f, 158f);
+            rt.sizeDelta = new Vector2(596f, 162f);
             rt.anchoredPosition = new Vector2(0f, 18f);
 
             // Header Title
@@ -192,7 +208,7 @@ namespace Contrast.Presentation
             titleGo.transform.SetParent(tunerPanel.transform, false);
             Text titleText = titleGo.AddComponent<Text>();
             titleText.font = GetFont();
-            titleText.text = "Bộ điều pha giao thoa sóng";
+            titleText.text = "Bộ điều pha giao thoa sóng (Cực đại · Trung gian · Cực tiểu)";
             titleText.fontSize = 13;
             titleText.fontStyle = FontStyle.Bold;
             titleText.color = LabStyleUI.TextSecondary;
@@ -239,11 +255,13 @@ namespace Contrast.Presentation
             waveRt.anchoredPosition = new Vector2(70f, 42f);
             waveRt.sizeDelta = new Vector2(WaveTexWidth, WaveTexHeight);
 
-            // Wave A and B Labels
-            CreateLabel(tunerPanel.transform, "Sóng A", new Vector2(14f, 88f), 11, FontStyle.Bold, LabStyleUI.TextPrimary);
-            CreateLabel(tunerPanel.transform, "Sóng B", new Vector2(14f, 54f), 11, FontStyle.Bold, LabStyleUI.TextSecondary);
+            // Wave A and B Labels matching reference image ("A CỐ ĐỊNH", "B DỊCH PHA")
+            CreateLabel(tunerPanel.transform, "A", new Vector2(16f, 95f), 12, FontStyle.Bold, LabStyleUI.TextPrimary);
+            CreateLabel(tunerPanel.transform, "CỐ ĐỊNH", new Vector2(10f, 80f), 9, FontStyle.Bold, LabStyleUI.TextMuted);
+            CreateLabel(tunerPanel.transform, "B", new Vector2(16f, 61f), 12, FontStyle.Bold, LabStyleUI.TextSecondary);
+            CreateLabel(tunerPanel.transform, "DỊCH PHA", new Vector2(10f, 46f), 9, FontStyle.Bold, LabStyleUI.TextMuted);
 
-            // Status Badge (Right side — Royal Sapphire / Slate rounded slot)
+            // Status Badge (Right side — Royal Sapphire / Slate rounded slot with Color Swatch Icon)
             GameObject badgeGo = new GameObject("StateBadge", typeof(RectTransform));
             badgeGo.transform.SetParent(tunerPanel.transform, false);
             stateBadgeBg = badgeGo.AddComponent<Image>();
@@ -253,42 +271,60 @@ namespace Contrast.Presentation
             badgeRt.anchorMin = new Vector2(1f, 0.5f);
             badgeRt.anchorMax = new Vector2(1f, 0.5f);
             badgeRt.pivot = new Vector2(1f, 0.5f);
-            badgeRt.anchoredPosition = new Vector2(-16f, 12f);
-            badgeRt.sizeDelta = new Vector2(168f, 68f);
+            badgeRt.anchoredPosition = new Vector2(-14f, 12f);
+            badgeRt.sizeDelta = new Vector2(212f, 68f);
 
-            // Badge Title Text
+            // Circular Color Swatch Icon on Left of StateBadge showing exact in-game color
+            GameObject colorIconGo = new GameObject("StateColorIcon", typeof(RectTransform));
+            colorIconGo.transform.SetParent(badgeGo.transform, false);
+            stateBadgeColorIcon = colorIconGo.AddComponent<Image>();
+            stateBadgeColorIcon.sprite = LabStyleUI.GetSoftCircleSprite();
+            stateBadgeColorIcon.color = new Color(0.98f, 0.99f, 1.00f, 1f);
+            stateBadgeColorIcon.raycastTarget = false;
+            stateBadgeColorOutline = colorIconGo.AddComponent<Outline>();
+            stateBadgeColorOutline.effectColor = new Color(0.12f, 0.22f, 0.36f, 0.90f);
+            stateBadgeColorOutline.effectDistance = new Vector2(1.5f, -1.5f);
+
+            RectTransform ciRt = colorIconGo.GetComponent<RectTransform>();
+            ciRt.anchorMin = new Vector2(0f, 0.5f);
+            ciRt.anchorMax = new Vector2(0f, 0.5f);
+            ciRt.pivot = new Vector2(0.5f, 0.5f);
+            ciRt.anchoredPosition = new Vector2(22f, 0f);
+            ciRt.sizeDelta = new Vector2(24f, 24f);
+
+            // Badge Title Text ("GIAO THOA CỰC ĐẠI / TRUNG GIAN / CỰC TIỂU")
             GameObject badgeTitleGo = new GameObject("Title", typeof(RectTransform));
             badgeTitleGo.transform.SetParent(badgeGo.transform, false);
             stateBadgeTitle = badgeTitleGo.AddComponent<Text>();
             stateBadgeTitle.font = GetFont();
-            stateBadgeTitle.fontSize = 17;
+            stateBadgeTitle.fontSize = 13;
             stateBadgeTitle.fontStyle = FontStyle.Bold;
-            stateBadgeTitle.alignment = TextAnchor.MiddleCenter;
+            stateBadgeTitle.alignment = TextAnchor.MiddleLeft;
             stateBadgeTitle.color = Color.white;
-            stateBadgeTitle.text = "SÁNG";
+            stateBadgeTitle.text = "GIAO THOA CỰC ĐẠI";
 
             RectTransform btRt = badgeTitleGo.GetComponent<RectTransform>();
             btRt.anchorMin = new Vector2(0f, 0.48f);
             btRt.anchorMax = new Vector2(1f, 1f);
-            btRt.offsetMin = Vector2.zero;
-            btRt.offsetMax = new Vector2(0f, -2f);
+            btRt.offsetMin = new Vector2(40f, 0f);
+            btRt.offsetMax = new Vector2(-6f, -2f);
 
-            // Badge Relation Text
+            // Badge Relation & Color Nature Text ("Màu Trắng · Cùng pha (Δφ = 0°)")
             GameObject badgeRelGo = new GameObject("Relation", typeof(RectTransform));
             badgeRelGo.transform.SetParent(badgeGo.transform, false);
             stateBadgeRelation = badgeRelGo.AddComponent<Text>();
             stateBadgeRelation.font = GetFont();
             stateBadgeRelation.fontSize = 10;
             stateBadgeRelation.fontStyle = FontStyle.Bold;
-            stateBadgeRelation.alignment = TextAnchor.MiddleCenter;
-            stateBadgeRelation.color = new Color(0.86f, 0.92f, 1f, 0.88f);
-            stateBadgeRelation.text = "Cùng pha (Δφ = 0°)";
+            stateBadgeRelation.alignment = TextAnchor.MiddleLeft;
+            stateBadgeRelation.color = new Color(0.88f, 0.94f, 1f, 0.94f);
+            stateBadgeRelation.text = "Màu Trắng · Cùng pha (Δφ = 0°)";
 
             RectTransform brRt = badgeRelGo.GetComponent<RectTransform>();
             brRt.anchorMin = new Vector2(0f, 0f);
             brRt.anchorMax = new Vector2(1f, 0.50f);
-            brRt.offsetMin = Vector2.zero;
-            brRt.offsetMax = Vector2.zero;
+            brRt.offsetMin = new Vector2(40f, 2f);
+            brRt.offsetMax = new Vector2(-6f, 0f);
 
             // Cyclic Ombre Strip (Bottom of card)
             GameObject ombreGo = new GameObject("OmbreStrip", typeof(RectTransform));
@@ -323,7 +359,7 @@ namespace Contrast.Presentation
             ombreRt.anchorMin = new Vector2(0f, 0f);
             ombreRt.anchorMax = new Vector2(0f, 0f);
             ombreRt.pivot = new Vector2(0f, 0f);
-            ombreRt.anchoredPosition = new Vector2(106f, 14f);
+            ombreRt.anchoredPosition = new Vector2(106f, 20f);
             ombreRt.sizeDelta = new Vector2(240f, 12f);
 
             // Phase zone boundary divider lines (BRIGHT / TUNING / DARK / TUNING)
@@ -361,7 +397,8 @@ namespace Contrast.Presentation
             cursorMarker.pivot = new Vector2(0.5f, 0.5f);
             cursorMarker.sizeDelta = new Vector2(3f, 20f);
 
-            CreateLabel(tunerPanel.transform, "← / →  Đổi pha tuần hoàn", new Vector2(374f, 12f), 11, FontStyle.Bold, LabStyleUI.TextSecondary);
+            CreateLabel(tunerPanel.transform, "CỰC ĐẠI · TRUNG GIAN · CỰC TIỂU · TRUNG GIAN · LẶP", new Vector2(88f, 3f), 9, FontStyle.Bold, LabStyleUI.TextMuted);
+            CreateLabel(tunerPanel.transform, "← / →  DỊCH SÓNG B · PHA TUẦN HOÀN", new Vector2(362f, 16f), 10, FontStyle.Bold, LabStyleUI.TextSecondary);
         }
 
         public static Color EvaluateHtmlStripColor(float localPhase)
@@ -398,22 +435,64 @@ namespace Contrast.Presentation
 
             Image panelBg = hintPanel.AddComponent<Image>();
             LabStyleUI.ApplySlicedSprite(panelBg, LabStyleUI.GetCardSprite(), true, -4f);
+            panelBg.raycastTarget = false;
 
             RectTransform rt = hintPanel.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0f, 1f);
             rt.anchorMax = new Vector2(0f, 1f);
             rt.pivot = new Vector2(0f, 1f);
             rt.anchoredPosition = new Vector2(22f, -80f);
-            rt.sizeDelta = new Vector2(310f, 172f);
+            rt.sizeDelta = new Vector2(384f, 184f);
 
-            // Controls text
-            CreateLabel(hintPanel.transform, "Hướng dẫn điều khiển", new Vector2(18f, 138f), 13, FontStyle.Bold, LabStyleUI.TextPrimary);
-            CreateLabel(hintPanel.transform, "A / D          Di chuyển trái / phải", new Vector2(18f, 112f), 12, FontStyle.Normal, LabStyleUI.TextSecondary);
-            CreateLabel(hintPanel.transform, "SPACE / W      Nhảy", new Vector2(18f, 91f), 12, FontStyle.Normal, LabStyleUI.TextSecondary);
-            CreateLabel(hintPanel.transform, "S              Rơi nhanh", new Vector2(18f, 70f), 12, FontStyle.Normal, LabStyleUI.TextSecondary);
-            CreateLabel(hintPanel.transform, "← / →          Đổi pha màu (Sáng/Xám/Tối)", new Vector2(18f, 49f), 12, FontStyle.Normal, LabStyleUI.TextSecondary);
-            CreateLabel(hintPanel.transform, "X              Ghi toạ độ vân Newton", new Vector2(18f, 28f), 12, FontStyle.Bold, new Color(1f, 0.89f, 0.50f, 0.96f));
-            CreateLabel(hintPanel.transform, "R              Chơi lại màn", new Vector2(18f, 9f), 11, FontStyle.Normal, LabStyleUI.TextMuted);
+            // Header Title
+            CreateLabel(hintPanel.transform, "HƯỚNG DẪN ĐIỀU KHIỂN", new Vector2(18f, 148f), 13, FontStyle.Bold, LabStyleUI.TextPrimary);
+
+            // Clean 2-column rows (Key badge on left, action description on right — never wraps or overlaps)
+            CreateHintRow(hintPanel.transform, "Row_Move", "A / D", "Di chuyển trái / phải", 118f, LabStyleUI.TextSecondary);
+            CreateHintRow(hintPanel.transform, "Row_Jump", "SPACE / W", "Nhảy lên", 95f, LabStyleUI.TextSecondary);
+            CreateHintRow(hintPanel.transform, "Row_Fall", "S", "Rơi nhanh xuống", 72f, LabStyleUI.TextSecondary);
+            CreateHintRow(hintPanel.transform, "Row_Phase", "← / →", "Đổi giao thoa (Cực đại / Trung gian / Cực tiểu)", 49f, LabStyleUI.TextSecondary);
+            CreateHintRow(hintPanel.transform, "Row_Newton", "X", "Ghi toạ độ vân tròn Newton", 26f, new Color(1f, 0.89f, 0.50f, 0.96f));
+            CreateHintRow(hintPanel.transform, "Row_Restart", "R", "Chơi lại màn hiện tại", 5f, LabStyleUI.TextMuted);
+        }
+
+        private void CreateHintRow(Transform parent, string name, string keyStr, string descStr, float yPos, Color descColor)
+        {
+            GameObject keyGo = new GameObject(name + "_Key", typeof(RectTransform));
+            keyGo.transform.SetParent(parent, false);
+            Text kTxt = keyGo.AddComponent<Text>();
+            kTxt.font = GetFont();
+            kTxt.text = keyStr;
+            kTxt.fontSize = 11;
+            kTxt.fontStyle = FontStyle.Bold;
+            kTxt.color = new Color(0.52f, 0.88f, 1.00f, 0.98f);
+            kTxt.alignment = TextAnchor.MiddleLeft;
+            kTxt.horizontalOverflow = HorizontalWrapMode.Overflow;
+            kTxt.raycastTarget = false;
+            RectTransform kRt = keyGo.GetComponent<RectTransform>();
+            kRt.anchorMin = Vector2.zero;
+            kRt.anchorMax = Vector2.zero;
+            kRt.pivot = Vector2.zero;
+            kRt.anchoredPosition = new Vector2(18f, yPos);
+            kRt.sizeDelta = new Vector2(82f, 20f);
+
+            GameObject descGo = new GameObject(name + "_Desc", typeof(RectTransform));
+            descGo.transform.SetParent(parent, false);
+            Text dTxt = descGo.AddComponent<Text>();
+            dTxt.font = GetFont();
+            dTxt.text = descStr;
+            dTxt.fontSize = 11;
+            dTxt.fontStyle = FontStyle.Normal;
+            dTxt.color = descColor;
+            dTxt.alignment = TextAnchor.MiddleLeft;
+            dTxt.horizontalOverflow = HorizontalWrapMode.Overflow;
+            dTxt.raycastTarget = false;
+            RectTransform dRt = descGo.GetComponent<RectTransform>();
+            dRt.anchorMin = Vector2.zero;
+            dRt.anchorMax = Vector2.zero;
+            dRt.pivot = Vector2.zero;
+            dRt.anchoredPosition = new Vector2(104f, yPos);
+            dRt.sizeDelta = new Vector2(268f, 20f);
         }
 
         private void BuildCheckpointToast(Transform parent)
@@ -462,6 +541,8 @@ namespace Contrast.Presentation
             t.fontStyle = style;
             t.color = col;
             t.alignment = TextAnchor.MiddleLeft;
+            t.horizontalOverflow = HorizontalWrapMode.Overflow;
+            t.raycastTarget = false;
 
             RectTransform rt = go.GetComponent<RectTransform>();
             rt.anchorMin = new Vector2(0f, 0f);
@@ -608,28 +689,49 @@ namespace Contrast.Presentation
             switch (color)
             {
                 case LogicalColor.White:
-                    stateBadgeTitle.text = "SÁNG";
+                    stateBadgeTitle.text = "GIAO THOA CỰC ĐẠI";
                     stateBadgeTitle.color = Color.white;
-                    stateBadgeRelation.text = "Cùng pha (Δφ ≈ 0°)";
+                    stateBadgeRelation.text = "Màu Trắng · Cùng pha (Δφ ≈ 0°)";
                     stateBadgeBg.sprite = LabStyleUI.GetPrimaryButtonSprite();
                     stateBadgeBg.color = Color.white;
+                    if (stateBadgeColorIcon != null)
+                    {
+                        stateBadgeColorIcon.sprite = LabStyleUI.GetSoftCircleSprite();
+                        stateBadgeColorIcon.color = new Color(0.98f, 0.99f, 1.00f, 1f);
+                    }
+                    if (stateBadgeColorOutline != null)
+                        stateBadgeColorOutline.effectColor = new Color(0.12f, 0.22f, 0.36f, 0.90f);
                     break;
 
                 case LogicalColor.Gray:
-                    stateBadgeTitle.text = "ĐIỀU PHA";
-                    stateBadgeTitle.color = new Color(0.92f, 0.96f, 1f, 1f);
-                    stateBadgeRelation.text = "Lệch pha (Δφ ≈ 90°)";
+                    stateBadgeTitle.text = "GIAO THOA TRUNG GIAN";
+                    stateBadgeTitle.color = new Color(0.94f, 0.97f, 1f, 1f);
+                    stateBadgeRelation.text = "Màu Xám · Lệch pha (Δφ ≈ 90°)";
                     stateBadgeBg.sprite = LabStyleUI.GetSecondaryButtonSprite();
                     stateBadgeBg.color = Color.white;
+                    if (stateBadgeColorIcon != null)
+                    {
+                        stateBadgeColorIcon.sprite = LabStyleUI.GetSoftCircleSprite();
+                        stateBadgeColorIcon.color = new Color(0.60f, 0.66f, 0.74f, 1f);
+                    }
+                    if (stateBadgeColorOutline != null)
+                        stateBadgeColorOutline.effectColor = new Color(0.92f, 0.96f, 1.00f, 0.90f);
                     break;
 
                 case LogicalColor.Black:
                 default:
-                    stateBadgeTitle.text = "TỐI";
-                    stateBadgeTitle.color = new Color(0.80f, 0.86f, 0.94f, 1f);
-                    stateBadgeRelation.text = "Ngược pha (Δφ ≈ 180°)";
+                    stateBadgeTitle.text = "GIAO THOA CỰC TIỂU";
+                    stateBadgeTitle.color = new Color(0.86f, 0.92f, 1f, 1f);
+                    stateBadgeRelation.text = "Màu Đen · Ngược pha (Δφ ≈ 180°)";
                     stateBadgeBg.sprite = LabStyleUI.GetSecondaryButtonSprite();
                     stateBadgeBg.color = new Color(0.58f, 0.64f, 0.74f, 1f);
+                    if (stateBadgeColorIcon != null)
+                    {
+                        stateBadgeColorIcon.sprite = LabStyleUI.GetSoftCircleSprite();
+                        stateBadgeColorIcon.color = new Color(0.06f, 0.08f, 0.13f, 1f);
+                    }
+                    if (stateBadgeColorOutline != null)
+                        stateBadgeColorOutline.effectColor = new Color(0.55f, 0.82f, 1.00f, 0.90f);
                     break;
             }
         }

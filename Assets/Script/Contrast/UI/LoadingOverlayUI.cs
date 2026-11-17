@@ -15,8 +15,36 @@ namespace Contrast.UI
 
         private void Awake()
         {
-            BuildUI();
+            EnsureInitialized();
             Show(false);
+        }
+
+        public void EnsureInitialized()
+        {
+            if (panel != null)
+                return;
+
+            Transform existingPanel = transform.Find("Canvas/Panel");
+            if (existingPanel != null)
+            {
+                panel = existingPanel.gameObject;
+                titleText = existingPanel.Find("Title")?.GetComponent<Text>();
+                subText = existingPanel.Find("Subtitle")?.GetComponent<Text>();
+                if (titleText != null && subText != null)
+                    return;
+                panel = null;
+            }
+
+            Transform staleCanvas = transform.Find("Canvas");
+            if (staleCanvas != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(staleCanvas.gameObject);
+                else
+                    DestroyImmediate(staleCanvas.gameObject);
+            }
+
+            BuildUI();
         }
 
         public void Show(bool visible, string customTitle = null, string customSubtitle = null)

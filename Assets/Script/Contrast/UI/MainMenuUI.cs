@@ -23,6 +23,7 @@ namespace Contrast.UI
     ///   <item><see cref="MainMenuDemoShowcaseCluster"/> — Right-column live gameplay showcase stage</item>
     /// </list>
     /// </summary>
+    [ExecuteAlways]
     public sealed class MainMenuUI : MonoBehaviour
     {
         public const string DemoLobbyLevelResourcePath = "Levels/DemoLobbyLevel";
@@ -84,7 +85,33 @@ namespace Contrast.UI
         private void Awake()
         {
             EnsureInitialized();
-            Show(false);
+            bool isMainMenuScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == GameManager.MainMenuSceneName;
+            if (isMainMenuScene && GameManager.Instance == null)
+                Show(true);
+            else
+                Show(false);
+        }
+
+        private void Start()
+        {
+            if (Application.isPlaying && GameManager.Instance == null)
+            {
+                Show(true);
+            }
+        }
+
+        private void OnEnable()
+        {
+#if UNITY_EDITOR
+            if (!Application.isPlaying &&
+                UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == GameManager.MainMenuSceneName &&
+                gameObject.name == "MainMenuUI")
+            {
+                panel = null;
+                EnsureInitialized();
+                Show(true);
+            }
+#endif
         }
 
         private void OnDestroy()
@@ -92,13 +119,69 @@ namespace Contrast.UI
             settingsCluster.UnbindAudioSettings();
         }
 
+        [ContextMenu("Build / Refresh Main Menu UI In Scene")]
+        public void RebuildMenuUIInScene()
+        {
+            panel = null;
+            EnsureInitialized();
+            Show(true);
+        }
+
         public void EnsureInitialized()
         {
             if (panel != null)
                 return;
+
             EnsureEventSystem();
+
+            Transform existingPanel = transform.Find("Canvas/Panel");
+            if (existingPanel != null && TryBindExistingUI(existingPanel))
+            {
+                if (Application.isPlaying)
+                    settingsCluster.BindAudioSettings();
+                UpdateAnimatedBackdropAndDemo(0.8f, 0.016f);
+                return;
+            }
+
+            Transform staleCanvas = transform.Find("Canvas");
+            if (staleCanvas != null)
+            {
+                if (Application.isPlaying)
+                    Destroy(staleCanvas.gameObject);
+                else
+                    DestroyImmediate(staleCanvas.gameObject);
+            }
+
             BuildUI();
-            settingsCluster.BindAudioSettings();
+            if (Application.isPlaying)
+                settingsCluster.BindAudioSettings();
+        }
+
+        private bool TryBindExistingUI(Transform existingPanel)
+        {
+            panel = existingPanel.gameObject;
+            Image bg = panel.GetComponent<Image>();
+            if (bg != null)
+            {
+                bg.sprite = MainMenuUIBuilder.GetSkyGradientSprite();
+                bg.color = Color.white;
+            }
+
+            Transform existingCards = existingPanel.Find("MainCardsRoot");
+            if (existingCards != null)
+                cardsRoot = existingCards.gameObject;
+
+            bool okBackdrop = backdropCluster.BindExisting(existingPanel);
+            bool okShowcase = demoShowcaseCluster.BindExisting(existingPanel);
+            bool okPlay = playPanelCluster.BindExisting(
+                existingPanel,
+                SelectPlayFromBeginning,
+                SelectDirectLevel,
+                OpenSettings,
+                QuitApplication);
+            bool okSettings = settingsCluster.BindExisting(existingPanel, CloseSettings);
+
+            return okBackdrop && okShowcase && okPlay && okSettings;
         }
 
         public void Show(bool visible)
@@ -111,7 +194,8 @@ namespace Contrast.UI
             {
                 settingsCluster.SetActive(false);
                 OpenPlaySubMenu();
-                ContrastAudioManager.EnsureInstance()?.PlayMenuMusic();
+                if (Application.isPlaying)
+                    ContrastAudioManager.EnsureInstance()?.PlayMenuMusic();
             }
         }
 
@@ -162,13 +246,13 @@ namespace Contrast.UI
         public void SelectPlayFromBeginning()
         {
             ContrastAudioManager.Instance?.PlayButtonClick();
-            GameManager.Instance?.StartCampaign();
+            GameManager.LaunchCampaignFromMainMenu(0);
         }
 
         public void SelectDirectLevel(int levelIndex)
         {
             ContrastAudioManager.Instance?.PlayButtonClick();
-            GameManager.Instance?.PlayDirectLevel(levelIndex);
+            GameManager.LaunchCampaignFromMainMenu(levelIndex);
         }
 
         public void OnPlay() => OpenPlaySubMenu();
@@ -188,6 +272,9 @@ namespace Contrast.UI
 
         private void Update()
         {
+            if (!Application.isPlaying)
+                return;
+
             if (panel == null || !panel.activeInHierarchy)
                 return;
 
@@ -203,22 +290,25 @@ namespace Contrast.UI
                 return;
             }
 
-            if (IsKey1Pressed())
+            if (Config.Instance.enableTest)
             {
-                SelectDirectLevel(0);
-                return;
-            }
+                if (IsKey1Pressed())
+                {
+                    SelectDirectLevel(0);
+                    return;
+                }
 
-            if (IsKey2Pressed())
-            {
-                SelectDirectLevel(1);
-                return;
-            }
+                if (IsKey2Pressed())
+                {
+                    SelectDirectLevel(1);
+                    return;
+                }
 
-            if (IsKey3Pressed())
-            {
-                SelectDirectLevel(2);
-                return;
+                if (IsKey3Pressed())
+                {
+                    SelectDirectLevel(2);
+                    return;
+                }
             }
 
             if (IsConfirmPressed())

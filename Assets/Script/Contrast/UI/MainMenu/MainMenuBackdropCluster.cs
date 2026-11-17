@@ -25,6 +25,130 @@ namespace Contrast.UI
             BuildTopHeaderBar(panelTransform);
         }
 
+        public bool BindExisting(Transform panelTransform)
+        {
+            Transform skyLayer = panelTransform.Find("AnimatedSkyLayer");
+            Transform headerRoot = panelTransform.Find("BrandHeader");
+            if (skyLayer == null || headerRoot == null)
+                return false;
+
+            skyMotes.Clear();
+            skyMoteParams.Clear();
+
+            Sprite circle = MainMenuUIBuilder.GetCircleSprite();
+            Sprite ring = MainMenuUIBuilder.GetRingSprite();
+
+            Transform outerGlow = skyLayer.Find("MoonAtmosphereGlow");
+            if (outerGlow != null)
+            {
+                moonHaloOuter = outerGlow.GetComponent<RectTransform>();
+                Image img = outerGlow.GetComponent<Image>();
+                if (img != null) img.sprite = circle;
+            }
+
+            Transform midRing = skyLayer.Find("MoonInterferenceRing");
+            if (midRing != null)
+            {
+                moonHaloMid = midRing.GetComponent<RectTransform>();
+                Image img = midRing.GetComponent<Image>();
+                if (img != null) img.sprite = ring;
+            }
+
+            Transform innerGlow = skyLayer.Find("MoonInnerHalo");
+            if (innerGlow != null)
+            {
+                Image img = innerGlow.GetComponent<Image>();
+                if (img != null) img.sprite = circle;
+            }
+
+            Transform moonCore = skyLayer.Find("FullMoonCore");
+            if (moonCore != null)
+            {
+                Image img = moonCore.GetComponent<Image>();
+                if (img != null) img.sprite = circle;
+            }
+
+            for (int i = 0; i < 24; i++)
+            {
+                Transform mote = skyLayer.Find("OpticalMote_" + i);
+                if (mote == null) continue;
+                Image mImg = mote.GetComponent<Image>();
+                if (mImg != null) mImg.sprite = circle;
+                RectTransform mRt = mote.GetComponent<RectTransform>();
+                float x0 = -900f + ((i * 173) % 1800);
+                float y0 = -480f + ((i * 239) % 960);
+                float spd = 12f + (i % 5) * 6f;
+                float ph = i * 0.77f;
+                skyMotes.Add(mRt);
+                skyMoteParams.Add(new Vector4(x0, y0, spd, ph));
+            }
+
+            Transform bgmPill = headerRoot.Find("NowPlayingBadge");
+            if (bgmPill != null)
+            {
+                Image pillBg = bgmPill.GetComponent<Image>();
+                if (pillBg != null)
+                    LabStyleUI.ApplySlicedSprite(pillBg, LabStyleUI.GetPillSprite(), false);
+                Transform spk = bgmPill.Find("SpeakerIcon");
+                if (spk != null)
+                {
+                    Image spkImg = spk.GetComponent<Image>();
+                    if (spkImg != null)
+                        spkImg.sprite = LabStyleUI.GetIconSprite(LabStyleUI.IconKind.Speaker);
+                }
+            }
+
+            Transform topDock = headerRoot.Find("TopLabDock");
+            if (topDock != null)
+            {
+                Image dockBg = topDock.GetComponent<Image>();
+                if (dockBg != null)
+                    LabStyleUI.ApplySlicedSprite(dockBg, LabStyleUI.GetTopDockSprite(), false);
+                Transform groove = topDock.Find("HeaderGroove");
+                if (groove != null)
+                {
+                    Image grooveBg = groove.GetComponent<Image>();
+                    if (grooveBg != null)
+                    {
+                        Color col = grooveBg.color;
+                        LabStyleUI.ApplySlicedSprite(grooveBg, LabStyleUI.GetRecessedSlotSprite(), false);
+                        grooveBg.color = col;
+                    }
+                }
+            }
+
+            Transform fsBtnTr = headerRoot.Find("FullscreenButton");
+            if (fsBtnTr != null)
+            {
+                Transform circleBg = fsBtnTr.Find("CircleBg");
+                if (circleBg != null)
+                {
+                    Image fsImg = circleBg.GetComponent<Image>();
+                    if (fsImg != null)
+                        fsImg.sprite = LabStyleUI.GetCircleButtonSprite();
+                    Transform fsIcon = circleBg.Find("Icon");
+                    if (fsIcon != null)
+                    {
+                        Image icImg = fsIcon.GetComponent<Image>();
+                        if (icImg != null)
+                            icImg.sprite = LabStyleUI.GetIconSprite(LabStyleUI.IconKind.Fullscreen);
+                    }
+                }
+                Button fsBtn = fsBtnTr.GetComponent<Button>();
+                if (fsBtn != null)
+                {
+                    fsBtn.onClick.RemoveAllListeners();
+                    fsBtn.onClick.AddListener(() =>
+                    {
+                        ContrastAudioManager.Instance?.PlayButtonClick();
+                        Screen.fullScreen = !Screen.fullScreen;
+                    });
+                }
+            }
+
+            return true;
+        }
+
         public void UpdateSky(float time)
         {
             if (moonHaloOuter != null)

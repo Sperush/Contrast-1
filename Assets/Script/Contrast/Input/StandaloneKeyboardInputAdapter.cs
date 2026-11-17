@@ -111,68 +111,83 @@ namespace Contrast.Input
 
         public int GetColorChunkStep()
         {
+            if (Contrast.Core.Config.Instance.enableTest)
+            {
 #if ENABLE_INPUT_SYSTEM
-            Keyboard kb = Keyboard.current;
-            if (kb == null)
+                Keyboard kb = Keyboard.current;
+                if (kb == null)
+                    return 0;
+
+                if (kb.upArrowKey.wasPressedThisFrame)
+                    return 1;
+                if (kb.downArrowKey.wasPressedThisFrame)
+                    return -1;
+
                 return 0;
-
-            if (kb.upArrowKey.wasPressedThisFrame)
-                return 1;
-            if (kb.downArrowKey.wasPressedThisFrame)
-                return -1;
-
-            return 0;
 #else
-            if (UnityEngine.Input.GetKeyDown(KeyCode.UpArrow))
-                return 1;
-            if (UnityEngine.Input.GetKeyDown(KeyCode.DownArrow))
-                return -1;
+                if (UnityEngine.Input.GetKeyDown(KeyCode.UpArrow))
+                    return 1;
+                if (UnityEngine.Input.GetKeyDown(KeyCode.DownArrow))
+                    return -1;
 
-            return 0;
+                return 0;
 #endif
+            }
+            else
+            {
+                return 0;
+            }
         }
 
         public bool TryGetDirectColor(out LogicalColor color)
         {
-#if ENABLE_INPUT_SYSTEM
-            Keyboard kb = Keyboard.current;
-            if (kb != null)
+            if (Contrast.Core.Config.Instance.enableTest)
             {
-                if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame)
+#if ENABLE_INPUT_SYSTEM
+                Keyboard kb = Keyboard.current;
+                if (kb != null)
+                {
+                    if (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame)
+                    {
+                        color = LogicalColor.White;
+                        return true;
+                    }
+                    if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame)
+                    {
+                        color = LogicalColor.Gray;
+                        return true;
+                    }
+                    if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame)
+                    {
+                        color = LogicalColor.Black;
+                        return true;
+                    }
+                }
+#else
+                if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha1) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad1))
                 {
                     color = LogicalColor.White;
                     return true;
                 }
-                if (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame)
+                if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha2) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad2))
                 {
                     color = LogicalColor.Gray;
                     return true;
                 }
-                if (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame)
+                if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha3) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad3))
                 {
                     color = LogicalColor.Black;
                     return true;
                 }
+#endif
+                color = LogicalColor.White;
+                return false;
             }
-#else
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha1) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad1))
+            else
             {
                 color = LogicalColor.White;
-                return true;
+                return false;
             }
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha2) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad2))
-            {
-                color = LogicalColor.Gray;
-                return true;
-            }
-            if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha3) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad3))
-            {
-                color = LogicalColor.Black;
-                return true;
-            }
-#endif
-            color = LogicalColor.White;
-            return false;
         }
 
         public void ResetFrameState()

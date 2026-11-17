@@ -81,6 +81,122 @@ namespace Contrast.UI
                 ModalPanel.SetActive(false);
         }
 
+        public bool BindExisting(Transform parent, UnityAction onCloseSettings)
+        {
+            Transform existing = parent.Find("SettingsModalPanel");
+            if (existing == null)
+                return false;
+
+            ModalPanel = existing.gameObject;
+            Transform card = existing.Find("SettingsCard");
+            if (card == null)
+                return false;
+
+            Image cardBg = card.GetComponent<Image>();
+            if (cardBg != null)
+                LabStyleUI.ApplySlicedSprite(cardBg, LabStyleUI.GetCardSprite(), false);
+
+            musicSlider = BindExistingSliderRow(
+                card,
+                "MusicSliderRow",
+                out musicPercentText,
+                val =>
+                {
+                    if (suppressSliderCallback) return;
+                    ContrastAudioManager.EnsureInstance().SetMusicVolume(val);
+                    if (musicPercentText != null)
+                        musicPercentText.text = $"{Mathf.RoundToInt(val * 100f)}%";
+                });
+
+            sfxSlider = BindExistingSliderRow(
+                card,
+                "SfxSliderRow",
+                out sfxPercentText,
+                val =>
+                {
+                    if (suppressSliderCallback) return;
+                    ContrastAudioManager.EnsureInstance().SetSfxVolume(val);
+                    if (sfxPercentText != null)
+                        sfxPercentText.text = $"{Mathf.RoundToInt(val * 100f)}%";
+                });
+
+            BindButton(card, "TestSfxButton", LabStyleUI.GetSecondaryButtonSprite(), LabStyleUI.IconKind.Speaker, () => ContrastAudioManager.EnsureInstance().PlayCheckpoint());
+            BindButton(card, "ResetAudioButton", LabStyleUI.GetSecondaryButtonSprite(), LabStyleUI.IconKind.Restart, () =>
+            {
+                ContrastAudioManager.EnsureInstance().ResetDefaultVolumes();
+                ContrastAudioManager.EnsureInstance().PlayButtonClick();
+            });
+            BindButton(card, "CloseSettingsButton", LabStyleUI.GetPrimaryButtonSprite(), LabStyleUI.IconKind.PlayTriangle, onCloseSettings, false);
+
+            return true;
+        }
+
+        private static Slider BindExistingSliderRow(Transform card, string rowName, out Text percentText, UnityAction<float> onValueChanged)
+        {
+            percentText = null;
+            Transform row = card.Find(rowName);
+            if (row == null) return null;
+
+            Image rowBg = row.GetComponent<Image>();
+            if (rowBg != null)
+                LabStyleUI.ApplySlicedSprite(rowBg, LabStyleUI.GetRecessedSlotSprite(), false);
+
+            Transform pctTr = row.Find("PercentText");
+            if (pctTr != null)
+                percentText = pctTr.GetComponent<Text>();
+
+            Transform sliderTr = row.Find("Slider");
+            if (sliderTr == null) return null;
+
+            Image bgImg = sliderTr.Find("Background")?.GetComponent<Image>();
+            if (bgImg != null)
+            {
+                Color c = bgImg.color;
+                LabStyleUI.ApplySlicedSprite(bgImg, LabStyleUI.GetPillSprite(), false);
+                bgImg.color = c;
+            }
+
+            Image fillImg = sliderTr.Find("Fill Area/Fill")?.GetComponent<Image>();
+            if (fillImg != null)
+                LabStyleUI.ApplySlicedSprite(fillImg, LabStyleUI.GetPrimaryButtonSprite(), false);
+
+            Image handleImg = sliderTr.Find("Handle Slide Area/Handle")?.GetComponent<Image>();
+            if (handleImg != null)
+            {
+                handleImg.sprite = LabStyleUI.GetCircleButtonSprite();
+                handleImg.type = Image.Type.Simple;
+            }
+
+            Slider slider = sliderTr.GetComponent<Slider>();
+            if (slider != null)
+            {
+                slider.onValueChanged.RemoveAllListeners();
+                slider.onValueChanged.AddListener(onValueChanged);
+            }
+            return slider;
+        }
+
+        private static void BindButton(Transform parent, string name, Sprite bgSprite, LabStyleUI.IconKind iconKind, UnityAction onClick, bool hasIcon = true)
+        {
+            Transform tr = parent.Find(name);
+            if (tr == null) return;
+            Image img = tr.GetComponent<Image>();
+            if (img != null)
+                LabStyleUI.ApplySlicedSprite(img, bgSprite, false);
+            if (hasIcon)
+            {
+                Image icImg = tr.Find("Icon")?.GetComponent<Image>();
+                if (icImg != null)
+                    icImg.sprite = LabStyleUI.GetIconSprite(iconKind);
+            }
+            Button btn = tr.GetComponent<Button>();
+            if (btn != null)
+            {
+                btn.onClick.RemoveAllListeners();
+                btn.onClick.AddListener(onClick);
+            }
+        }
+
         public void Build(Transform parent, UnityAction onCloseSettings)
         {
             ModalPanel = MainMenuUIBuilder.NewUI("SettingsModalPanel", parent);
