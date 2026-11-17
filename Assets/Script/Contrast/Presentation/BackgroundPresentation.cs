@@ -46,12 +46,14 @@ namespace Contrast.Presentation
         {
             instance = this;
             EnsureComponents();
+            ConfigureCamera();
             InitMotes();
         }
 
         private void OnEnable()
         {
             instance = this;
+            EnsureComponents();
             ConfigureCamera();
         }
 
@@ -108,6 +110,18 @@ namespace Contrast.Presentation
                 // Match the HTML prototype base clear color #050812
                 targetCam.clearFlags = CameraClearFlags.SolidColor;
                 targetCam.backgroundColor = BottomColor;
+            }
+
+            UnityEngine.Camera[] allCams = UnityEngine.Camera.allCameras;
+            for (int i = 0; i < allCams.Length; i++)
+            {
+                UnityEngine.Camera c = allCams[i];
+                if (c != null && c.CompareTag("MainCamera"))
+                {
+                    c.clearFlags = CameraClearFlags.SolidColor;
+                    c.backgroundColor = BottomColor;
+                    targetCam = c;
+                }
             }
         }
 

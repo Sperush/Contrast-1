@@ -242,10 +242,15 @@ namespace Contrast.Player
             {
                 NewtonMarkRequested = false;
 
-                // 1. Arrow keys phase tuning / color changes still allowed (HTML lines 1549-1552)
+                // 1. Arrow keys phase tuning / color changes / Newton X-mark still allowed
                 if (inputReader != null)
                 {
                     PlayerInputIntent testInput = inputReader.ReadInput(deltaTime, moveSpeed, false);
+                    if (testInput.NewtonMarkRequested)
+                    {
+                        NewtonMarkRequested = true;
+                        OnNewtonMarkRequested?.Invoke();
+                    }
                     if (Mathf.Abs(testInput.PhaseTuneDelta) > Mathf.Epsilon)
                     {
                         TunePhase(testInput.PhaseTuneDelta);
@@ -264,7 +269,7 @@ namespace Contrast.Player
                 Vector2 mouseDelta = ReadMouseDelta();
                 UnityEngine.Camera cam = UnityEngine.Camera.main;
                 float orthoSize = cam != null && cam.orthographic ? cam.orthographicSize : 5f;
-                float screenH = Screen.height > 0 ? (float)Screen.height : 1080f;
+                float screenH = Screen.height >= 480 ? (float)Screen.height : 1080f;
                 float unitsPerPixel = (2f * orthoSize) / screenH;
                 float sensitivity = 1.0f;
 

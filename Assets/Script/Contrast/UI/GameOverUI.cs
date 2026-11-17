@@ -44,7 +44,11 @@ namespace Contrast.UI
 
             Transform existingPanel = transform.Find("Canvas/Panel");
             if (existingPanel != null && TryBindExistingUI(existingPanel))
+            {
+                if (panel != null)
+                    LabStyleUI.CrispenTextHierarchy(panel.transform);
                 return;
+            }
 
             Transform staleCanvas = transform.Find("Canvas");
             if (staleCanvas != null)
@@ -56,6 +60,8 @@ namespace Contrast.UI
             }
 
             BuildUI();
+            if (panel != null)
+                LabStyleUI.CrispenTextHierarchy(panel.transform);
         }
 
         private bool TryBindExistingUI(Transform existingPanel)
@@ -110,6 +116,7 @@ namespace Contrast.UI
 
         public void ShowResult(bool visible, string title, bool allowRetry)
         {
+            EnsureInitialized();
             bool isWin = title == "YOU WIN" || title.Contains("COMPLETE") || title.Contains("HOÀN THÀNH");
             Color accent = isWin
                 ? new Color(0.45f, 0.92f, 0.80f, 1f)
@@ -184,6 +191,7 @@ namespace Contrast.UI
             UnityEngine.Events.UnityAction onReplayLevel,
             UnityEngine.Events.UnityAction onMainMenu)
         {
+            EnsureInitialized();
             Color accent = GetCurrentNewtonAccent(new Color(0.45f, 0.92f, 0.80f, 1f));
             ApplyAccentTheme(accent, $"Hoàn thành · {levelTitle}");
 
@@ -244,6 +252,7 @@ namespace Contrast.UI
             UnityEngine.Events.UnityAction onPlayAgain,
             UnityEngine.Events.UnityAction onMainMenu)
         {
+            EnsureInitialized();
             Color accent = GetCurrentNewtonAccent(new Color(0.48f, 0.86f, 1f, 1f));
             ApplyAccentTheme(accent, "Hoàn tất trọn vẹn 3 thí nghiệm quang học (L01 · L02 · L03)");
 
@@ -408,8 +417,10 @@ namespace Contrast.UI
                 label.text = mainText;
 
             btn.onClick.RemoveAllListeners();
+            string btnName = btn.gameObject.name;
             btn.onClick.AddListener(() =>
             {
+                Debug.Log($"[UI_BUTTON][GameOverUI] Clicked {btnName} ({mainText})");
                 ContrastAudioManager.Instance?.PlayButtonClick();
                 onClick?.Invoke();
             });
@@ -417,16 +428,19 @@ namespace Contrast.UI
 
         private void OnRestartClicked()
         {
+            Debug.Log("[UI_BUTTON][GameOverUI] OnRestartClicked -> Restart");
             GameManager.Instance?.Restart();
         }
 
         private void OnRetryClicked()
         {
+            Debug.Log("[UI_BUTTON][GameOverUI] OnRetryClicked -> Retry");
             GameManager.Instance?.Retry();
         }
 
         private void OnReturnClicked()
         {
+            Debug.Log("[UI_BUTTON][GameOverUI] OnReturnClicked -> ReturnFromGameplay");
             GameManager.Instance?.ReturnFromGameplay();
         }
 
@@ -644,16 +658,7 @@ namespace Contrast.UI
 
         private static void EnsureEventSystem()
         {
-            if (Contrast.Core.UnityCompat.FindAny<EventSystem>() != null)
-                return;
-
-            GameObject go = new GameObject("EventSystem");
-            go.AddComponent<EventSystem>();
-#if ENABLE_INPUT_SYSTEM
-            go.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-            go.AddComponent<StandaloneInputModule>();
-#endif
+            LabStyleUI.EnsureEventSystem();
         }
     }
 }

@@ -120,9 +120,14 @@ namespace Contrast.UI
                         sfxPercentText.text = $"{Mathf.RoundToInt(val * 100f)}%";
                 });
 
-            BindButton(card, "TestSfxButton", LabStyleUI.GetSecondaryButtonSprite(), LabStyleUI.IconKind.Speaker, () => ContrastAudioManager.EnsureInstance().PlayCheckpoint());
+            BindButton(card, "TestSfxButton", LabStyleUI.GetSecondaryButtonSprite(), LabStyleUI.IconKind.Speaker, () =>
+            {
+                Debug.Log("[UI_BUTTON][MainMenuSettings] Clicked TestSfxButton -> PlayCheckpoint");
+                ContrastAudioManager.EnsureInstance().PlayCheckpoint();
+            });
             BindButton(card, "ResetAudioButton", LabStyleUI.GetSecondaryButtonSprite(), LabStyleUI.IconKind.Restart, () =>
             {
+                Debug.Log("[UI_BUTTON][MainMenuSettings] Clicked ResetAudioButton -> ResetDefaultVolumes");
                 ContrastAudioManager.EnsureInstance().ResetDefaultVolumes();
                 ContrastAudioManager.EnsureInstance().PlayButtonClick();
             });
@@ -271,7 +276,11 @@ namespace Contrast.UI
                 LabStyleUI.GetSecondaryButtonSprite(),
                 new Vector2(-216f, -158f),
                 new Vector2(194f, 58f),
-                () => ContrastAudioManager.EnsureInstance().PlayCheckpoint());
+                () =>
+                {
+                    Debug.Log("[UI_BUTTON][MainMenuSettings] Clicked TestSfxButton -> PlayCheckpoint");
+                    ContrastAudioManager.EnsureInstance().PlayCheckpoint();
+                });
 
             MainMenuUIBuilder.CreatePillUtilityButton(
                 card.transform,
@@ -283,6 +292,7 @@ namespace Contrast.UI
                 new Vector2(194f, 58f),
                 () =>
                 {
+                    Debug.Log("[UI_BUTTON][MainMenuSettings] Clicked ResetAudioButton -> ResetDefaultVolumes");
                     ContrastAudioManager.EnsureInstance().ResetDefaultVolumes();
                     ContrastAudioManager.EnsureInstance().PlayButtonClick();
                 });

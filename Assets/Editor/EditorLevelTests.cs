@@ -1087,6 +1087,8 @@ namespace Contrast.Tests
             UnityEngine.Object.DestroyImmediate(markerGo);
             UnityEngine.Object.DestroyImmediate(ctrlGo);
             UnityEngine.Object.DestroyImmediate(camGo);
+            if (UnityEngine.Camera.main != null)
+                UnityEngine.Camera.main.orthographicSize = 5f;
             ColorPlatform.ClearRegistry();
             LevelMarker.All.Clear();
         }
@@ -4561,6 +4563,221 @@ namespace Contrast.Tests
                 Transform markBtn = newtonCtrl.ObjectiveCardGo.transform.Find("MarkActionButton");
                 AssertTrue(slotXk != null && slotXi != null && slotXkp != null && markBtn != null,
                     "LabUI_03_NewtonReadoutSlotsAndNhapButton", "ObjectiveCard contains x_k, x_i, x_k' recessed mm slots and Royal-Blue NHẬP button");
+            }
+
+            // ----------------------------------------------------------------------------
+            // Task J: Flow 1 (MainMenu -> L01/L02/L03 T-Mode Playthrough & Button Logs)
+            //         & Flow 2 (2x Supersampled Crisp Text Verification)
+            // ----------------------------------------------------------------------------
+            List<string> capturedButtonLogs = new List<string>();
+            Application.LogCallback logListener = (condition, stackTrace, type) =>
+            {
+                if (!string.IsNullOrEmpty(condition) && condition.Contains("[UI_BUTTON]"))
+                    capturedButtonLogs.Add(condition);
+            };
+            Application.logMessageReceived += logListener;
+            try
+            {
+                // 1. Verify MainMenuUI buttons & crisp text (including TryBindExistingUI and EventSystem StandaloneInputModule repair)
+                UnityEngine.EventSystems.EventSystem existingEs = Contrast.Core.UnityCompat.FindAny<UnityEngine.EventSystems.EventSystem>(true);
+                if (existingEs != null)
+                {
+                    var oldMod = existingEs.GetComponent<UnityEngine.EventSystems.BaseInputModule>();
+                    if (oldMod != null)
+                        UnityEngine.Object.DestroyImmediate(oldMod);
+                }
+                UnityEngine.EventSystems.EventSystem repairedEs = Contrast.UI.LabStyleUI.EnsureEventSystem();
+                AssertTrue(repairedEs != null && repairedEs.GetComponent<UnityEngine.EventSystems.BaseInputModule>() != null && repairedEs.GetComponent<UnityEngine.EventSystems.BaseInputModule>().enabled,
+                    "Flow1_Menu_EventSystemHasActiveInputModule", "LabStyleUI.EnsureEventSystem guarantees an active BaseInputModule (StandaloneInputModule) on EventSystem");
+
+                GameObject menuFlowGo = new GameObject("FlowTest_MainMenuUI");
+                Contrast.UI.MainMenuUI menuFlow = menuFlowGo.AddComponent<Contrast.UI.MainMenuUI>();
+                menuFlow.EnsureInitialized();
+                // Force a second RebuildMenuUIInScene() so TryBindExistingUI is exercised on the existing Canvas/Panel hierarchy
+                menuFlow.RebuildMenuUIInScene();
+                menuFlow.Show(true);
+
+                UnityEngine.UI.Button btnPlayStart = menuFlowGo.transform.Find("Canvas/Panel/PlaySubMenuPanel/PlayFromStartButton")?.GetComponent<UnityEngine.UI.Button>();
+                UnityEngine.UI.Button btnL01 = menuFlowGo.transform.Find("Canvas/Panel/PlaySubMenuPanel/SelectLevel_L01")?.GetComponent<UnityEngine.UI.Button>();
+                UnityEngine.UI.Button btnL02 = menuFlowGo.transform.Find("Canvas/Panel/PlaySubMenuPanel/SelectLevel_L02")?.GetComponent<UnityEngine.UI.Button>();
+                UnityEngine.UI.Button btnL03 = menuFlowGo.transform.Find("Canvas/Panel/PlaySubMenuPanel/SelectLevel_L03")?.GetComponent<UnityEngine.UI.Button>();
+                AssertTrue(btnPlayStart != null && btnPlayStart.interactable && btnPlayStart.targetGraphic != null && btnPlayStart.targetGraphic.raycastTarget &&
+                           btnL01 != null && btnL01.interactable && btnL01.targetGraphic != null && btnL01.targetGraphic.raycastTarget &&
+                           btnL02 != null && btnL02.interactable && btnL02.targetGraphic != null && btnL02.targetGraphic.raycastTarget &&
+                           btnL03 != null && btnL03.interactable && btnL03.targetGraphic != null && btnL03.targetGraphic.raycastTarget,
+                    "Flow1_Menu_PlayAndLevelSelectButtonsInteractableAndRaycastable",
+                    "PlayFromStartButton and SelectLevel_L01/L02/L03 are interactable with raycastTarget=true after TryBindExistingUI");
+
+                UnityEngine.UI.Button btnSettings = menuFlowGo.transform.Find("Canvas/Panel/PlaySubMenuPanel/SettingsButton")?.GetComponent<UnityEngine.UI.Button>();
+                UnityEngine.UI.Button btnTestSfx = menuFlowGo.transform.Find("Canvas/Panel/SettingsModalPanel/SettingsCard/TestSfxButton")?.GetComponent<UnityEngine.UI.Button>();
+                UnityEngine.UI.Button btnResetAudio = menuFlowGo.transform.Find("Canvas/Panel/SettingsModalPanel/SettingsCard/ResetAudioButton")?.GetComponent<UnityEngine.UI.Button>();
+                UnityEngine.UI.Button btnCloseSettings = menuFlowGo.transform.Find("Canvas/Panel/SettingsModalPanel/SettingsCard/CloseSettingsButton")?.GetComponent<UnityEngine.UI.Button>();
+                UnityEngine.UI.Button btnMenuFs = menuFlowGo.transform.Find("Canvas/Panel/BrandHeader/FullscreenButton")?.GetComponent<UnityEngine.UI.Button>();
+
+                btnSettings?.onClick.Invoke();
+                AssertTrue(menuFlow.IsSettingsOpen, "Flow1_Menu_SettingsButtonOpensModal", "SettingsButton click opens SettingsModalPanel");
+                btnTestSfx?.onClick.Invoke();
+                btnResetAudio?.onClick.Invoke();
+                btnCloseSettings?.onClick.Invoke();
+                AssertTrue(!menuFlow.IsSettingsOpen, "Flow1_Menu_CloseSettingsButtonClosesModal", "CloseSettingsButton click closes SettingsModalPanel");
+                btnMenuFs?.onClick.Invoke();
+
+                UnityEngine.UI.Text sampleMenuTxt = menuFlowGo.transform.Find("Canvas/Panel/PlaySubMenuPanel/SelectLevel_L01/Title")?.GetComponent<UnityEngine.UI.Text>();
+                AssertTrue(sampleMenuTxt != null && sampleMenuTxt.fontSize >= 28 && Mathf.Abs(sampleMenuTxt.transform.localScale.x - 0.5f) < 0.01f,
+                    "Flow2_Menu_CrispSupersampledText", "MainMenuUI leaf Text is 2x supersampled (fontSize doubled, localScale=0.5)");
+                UnityEngine.Object.DestroyImmediate(menuFlowGo);
+
+                // 2. Verify GameControlUI, InGameMenuUI, and GameOverUI buttons & crisp text
+                GameObject flowHudGo = new GameObject("FlowTest_GameControlUI");
+                Contrast.UI.GameControlUI flowHud = flowHudGo.AddComponent<Contrast.UI.GameControlUI>();
+                flowHud.Show(true);
+                GameObject flowTunerGo = new GameObject("FlowTest_PhaseTunerUI");
+                Contrast.Presentation.PhaseTunerUI flowTuner = flowTunerGo.AddComponent<Contrast.Presentation.PhaseTunerUI>();
+                flowTuner.EnsureInitialized();
+
+                bool guideBefore = flowTuner.IsUserGuideVisible;
+                flowHudGo.transform.Find("Canvas/Panel/GuideButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+                AssertTrue(flowTuner.IsUserGuideVisible == !guideBefore, "Flow1_HUD_GuideButtonTogglesHintCard", "GuideButton click toggles ControlHintCard visibility");
+                flowHudGo.transform.Find("Canvas/Panel/BackPillButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+                flowHudGo.transform.Find("Canvas/Panel/RETRYButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+                flowHudGo.transform.Find("Canvas/Panel/RESTARTButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+                flowHudGo.transform.Find("Canvas/Panel/MENUButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+
+                GameObject flowPauseGo = new GameObject("FlowTest_InGameMenuUI");
+                Contrast.UI.InGameMenuUI flowPause = flowPauseGo.AddComponent<Contrast.UI.InGameMenuUI>();
+                flowPause.Show(true);
+                flowPauseGo.transform.Find("Canvas/Panel/Modal/ResumeButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+                flowPauseGo.transform.Find("Canvas/Panel/Modal/RestartButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+                flowPauseGo.transform.Find("Canvas/Panel/Modal/ReturnButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+
+                GameObject flowWinGo = new GameObject("FlowTest_GameOverUI");
+                Contrast.UI.GameOverUI flowWin = flowWinGo.AddComponent<Contrast.UI.GameOverUI>();
+                bool nextClicked = false, replayClicked = false, menuClicked = false;
+                flowWin.ShowLevelComplete("L01", "L02", () => nextClicked = true, () => replayClicked = true, () => menuClicked = true);
+                flowWinGo.transform.Find("Canvas/Panel/ResultCard/ButtonRow/RETRYButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+                flowWinGo.transform.Find("Canvas/Panel/ResultCard/ButtonRow/RESTARTButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+                flowWinGo.transform.Find("Canvas/Panel/ResultCard/ButtonRow/RETURNButton")?.GetComponent<UnityEngine.UI.Button>()?.onClick.Invoke();
+                AssertTrue(nextClicked && replayClicked && menuClicked,
+                    "Flow1_GameOverUI_All3ButtonsInvokeCallbacks", "GameOverUI Next, Replay, and Return buttons all invoke their callbacks");
+
+                UnityEngine.UI.Text sampleHudTxt = flowHudGo.transform.Find("Canvas/Panel/GuideButton/Label")?.GetComponent<UnityEngine.UI.Text>();
+                UnityEngine.UI.Text sampleWinTxt = flowWinGo.transform.Find("Canvas/Panel/ResultCard/Title")?.GetComponent<UnityEngine.UI.Text>();
+                AssertTrue(sampleHudTxt != null && Mathf.Abs(sampleHudTxt.transform.localScale.x - 0.5f) < 0.01f &&
+                           sampleWinTxt != null && Mathf.Abs(sampleWinTxt.transform.localScale.x - 0.5f) < 0.01f,
+                    "Flow2_HUDAndWinUI_CrispSupersampledText", "GameControlUI and GameOverUI leaf Texts are 2x supersampled (localScale=0.5)");
+
+                UnityEngine.Object.DestroyImmediate(flowWinGo);
+                UnityEngine.Object.DestroyImmediate(flowPauseGo);
+                UnityEngine.Object.DestroyImmediate(flowTunerGo);
+                UnityEngine.Object.DestroyImmediate(flowHudGo);
+
+                // 3. End-to-End T-Mode Mouse Playthrough of L01, L02, and L03
+                string[] campaignLevels = { "L01", "L02", "L03" };
+                foreach (string lvlId in campaignLevels)
+                {
+                    string rawLvlJson = File.ReadAllText(Path.Combine(Application.dataPath, "Resources", "Levels", $"{lvlId}.json"));
+                    LevelData lvlData = LevelDataSanitizer.Sanitize(JsonUtility.FromJson<LevelData>(rawLvlJson), rawLvlJson, out _);
+                    loader.BuildRuntimeLevel(lvlData);
+                    newtonCtrl = EasyNewtonFinaleController.Instance;
+
+                    // Activate T-Mode (mouse free-move)
+                    Contrast.Core.Config.Instance.enableTest = true;
+                    l02Pc.SetTestMode(true);
+                    cf.SetTestModeFreeMove(true);
+                    AssertTrue(l02Pc.IsTestModeActive, $"Flow1_{lvlId}_TModeActivated", $"{lvlId}: T-Mode activated for mouse free-move playthrough");
+
+                    // Helper to move character via mouse delta in T-Mode to any world target
+                    void MoveWithMouseInTModeTo(Vector2 targetWorld)
+                    {
+                        for (int step = 0; step < 2; step++)
+                        {
+                            UnityEngine.Camera mainCam = UnityEngine.Camera.main;
+                            float ortho = mainCam != null && mainCam.orthographic ? mainCam.orthographicSize : 5f;
+                            float screenH = Screen.height >= 480 ? (float)Screen.height : 1080f;
+                            float unitsPerPixel = (2f * ortho) / screenH;
+                            Vector2 cur = l02Pc.transform.position;
+                            Vector2 deltaWorld = targetWorld - cur;
+                            if (deltaWorld.sqrMagnitude < 1e-6f)
+                                break;
+                            Vector2 mouseDeltaPx = unitsPerPixel > 1e-6f ? (deltaWorld / unitsPerPixel) : Vector2.zero;
+                            PlayerController.CustomMouseDeltaReader = () => mouseDeltaPx;
+                            l02Pc.ProcessUpdate(1f / 60f);
+                            PlayerController.CustomMouseDeltaReader = null;
+                            loader.ProcessPlayerInteractions(l02Pc);
+                            cf.ProcessCameraUpdate(1f / 60f);
+                        }
+                    }
+
+                    // Fly through every Quang Điểm collectible in the level using T-Mode mouse movement
+                    int expectedCollectibles = lvlData.collectibles != null ? lvlData.collectibles.Length : 0;
+                    if (lvlData.collectibles != null)
+                    {
+                        for (int q = 0; q < lvlData.collectibles.Length; q++)
+                        {
+                            if (lvlData.collectibles[q]?.position != null)
+                                MoveWithMouseInTModeTo(lvlData.collectibles[q].position.ToVector2());
+                        }
+                    }
+                    AssertTrue(QuangDiemItem.CollectedCount == expectedCollectibles && expectedCollectibles > 0,
+                        $"Flow1_{lvlId}_TModeCollectsAllQuangDiem",
+                        $"{lvlId}: Collected all {QuangDiemItem.CollectedCount}/{expectedCollectibles} Quang Điểm in T-Mode");
+
+                    // Fly through every Checkpoint in the level using T-Mode mouse movement
+                    if (lvlData.checkPoint != null)
+                    {
+                        for (int cpIdx = 0; cpIdx < lvlData.checkPoint.Length; cpIdx++)
+                        {
+                            if (lvlData.checkPoint[cpIdx]?.position != null)
+                                MoveWithMouseInTModeTo(lvlData.checkPoint[cpIdx].position.ToVector2());
+                        }
+                    }
+
+                    // Fly into Newton chamber and mark K -> I -> K' while in T-Mode using the NHẬP button
+                    UnityEngine.UI.Button nhapBtn = newtonCtrl.ObjectiveCardGo?.transform.Find("MarkActionButton")?.GetComponent<UnityEngine.UI.Button>();
+                    AssertTrue(nhapBtn != null, $"Flow1_{lvlId}_NhapButtonPresent", $"{lvlId}: MarkActionButton (NHẬP) exists in Newton HUD");
+
+                    // Step 1: Fly to Target 1 (K) with mouse and click NHẬP
+                    Vector2 target1Pos = newtonCtrl.GetTargetWorldPosition(0) + new Vector2(0f, 0.35f);
+                    MoveWithMouseInTModeTo(target1Pos);
+                    nhapBtn.onClick.Invoke();
+                    AssertTrue(newtonCtrl.HasK && newtonCtrl.CurrentTargetIndex == 1,
+                        $"Flow1_{lvlId}_TModeMarksTarget1_K", $"{lvlId}: Target 1 (K) locked in T-Mode via NHẬP button");
+
+                    // Step 2: Fly to Target 2 (I) with mouse and click NHẬP
+                    Time.captureFramerate = 0;
+                    Vector2 target2Pos = newtonCtrl.GetTargetWorldPosition(1) + new Vector2(0f, 0.35f);
+                    MoveWithMouseInTModeTo(target2Pos);
+                    newtonCtrl.AttemptCapture();
+                    AssertTrue(newtonCtrl.HasI && newtonCtrl.CurrentTargetIndex == 2,
+                        $"Flow1_{lvlId}_TModeMarksTarget2_I", $"{lvlId}: Target 2 (I) locked in T-Mode");
+
+                    // Step 3: Fly to Target 3 (K') with mouse and mark
+                    Vector2 target3Pos = newtonCtrl.GetTargetWorldPosition(2) + new Vector2(0f, 0.35f);
+                    MoveWithMouseInTModeTo(target3Pos);
+                    newtonCtrl.AttemptCapture();
+                    AssertTrue(newtonCtrl.HasKp && newtonCtrl.IsRevealActive && !l02Pc.IsTestModeActive,
+                        $"Flow1_{lvlId}_TModeMarksTarget3_Kp_CompletesAndUnlocksTMode",
+                        $"{lvlId}: Target 3 (K') locked in T-Mode, enters Reveal ({newtonCtrl.CalculatedLambda_nm:F0}nm), and exits T-Mode cleanly");
+                    AssertTrue(newtonCtrl.FringeOrderK <= EasyNewtonFinaleController.MaxFringeOrderK && EasyNewtonFinaleController.MaxFringeOrderK == 5,
+                        $"Flow1_{lvlId}_FringeOrderKClampedMax5",
+                        $"{lvlId}: Runtime FringeOrderK ({newtonCtrl.FringeOrderK}) is clamped <= {EasyNewtonFinaleController.MaxFringeOrderK}");
+                    newtonCtrl.ComputeNewtonCameraFraming(out _, out float lvlNewtonOrtho);
+                    AssertApproximately(8.6f * 1.15f, lvlNewtonOrtho, 1e-4f,
+                        $"Flow1_{lvlId}_UnifiedNewtonCameraSize15Pct",
+                        $"{lvlId}: Newton camera orthographicSize ({lvlNewtonOrtho:F2}) equals Level 2 base size + 15% ({8.6f * 1.15f:F2})");
+                    AssertApproximately(lvlData.newton.lambda, newtonCtrl.CalculatedLambda_nm, 1.0f,
+                        $"Flow1_{lvlId}_MeasuredWavelengthMatches",
+                        $"{lvlId}: Measured wavelength ({newtonCtrl.CalculatedLambda_nm:F1}nm) matches level lambda ({lvlData.newton.lambda:F1}nm)");
+                }
+
+                AssertTrue(capturedButtonLogs.Count >= 15,
+                    "Flow1_AllButtonsLogged",
+                    $"Captured {capturedButtonLogs.Count} [UI_BUTTON] log entries across MainMenu, HUD, Pause, GameOver, and Newton UI");
+            }
+            finally
+            {
+                Application.logMessageReceived -= logListener;
+                PlayerController.CustomMouseDeltaReader = null;
             }
 
             if (EasyNewtonFinaleController.Instance != null)

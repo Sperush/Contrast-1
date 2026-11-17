@@ -31,13 +31,20 @@ namespace Contrast.Input
 
             return Mathf.Clamp(axis, -1f, 1f);
 #else
-            float axis = 0f;
-            if (UnityEngine.Input.GetKey(KeyCode.D))
-                axis += 1f;
-            if (UnityEngine.Input.GetKey(KeyCode.A))
-                axis -= 1f;
+            try
+            {
+                float axis = 0f;
+                if (UnityEngine.Input.GetKey(KeyCode.D))
+                    axis += 1f;
+                if (UnityEngine.Input.GetKey(KeyCode.A))
+                    axis -= 1f;
 
-            return Mathf.Clamp(axis, -1f, 1f);
+                return Mathf.Clamp(axis, -1f, 1f);
+            }
+            catch
+            {
+                return 0f;
+            }
 #endif
         }
 
@@ -52,9 +59,16 @@ namespace Contrast.Input
             bool spaceEdge = kb.spaceKey.wasPressedThisFrame || (kb.spaceKey.isPressed && !prevSpacePressed);
             return wEdge || spaceEdge;
 #else
-            bool wEdge = UnityEngine.Input.GetKeyDown(KeyCode.W) || (UnityEngine.Input.GetKey(KeyCode.W) && !prevWPressed);
-            bool spaceEdge = UnityEngine.Input.GetKeyDown(KeyCode.Space) || (UnityEngine.Input.GetKey(KeyCode.Space) && !prevSpacePressed);
-            return wEdge || spaceEdge;
+            try
+            {
+                bool wEdge = UnityEngine.Input.GetKeyDown(KeyCode.W) || (UnityEngine.Input.GetKey(KeyCode.W) && !prevWPressed);
+                bool spaceEdge = UnityEngine.Input.GetKeyDown(KeyCode.Space) || (UnityEngine.Input.GetKey(KeyCode.Space) && !prevSpacePressed);
+                return wEdge || spaceEdge;
+            }
+            catch
+            {
+                return false;
+            }
 #endif
         }
 
@@ -67,7 +81,7 @@ namespace Contrast.Input
 
             return kb.sKey.isPressed;
 #else
-            return UnityEngine.Input.GetKey(KeyCode.S);
+            try { return UnityEngine.Input.GetKey(KeyCode.S); } catch { return false; }
 #endif
         }
 
@@ -86,13 +100,20 @@ namespace Contrast.Input
 
             return Mathf.Clamp(axis, -1f, 1f);
 #else
-            float axis = 0f;
-            if (UnityEngine.Input.GetKey(KeyCode.RightArrow))
-                axis += 1f;
-            if (UnityEngine.Input.GetKey(KeyCode.LeftArrow))
-                axis -= 1f;
+            try
+            {
+                float axis = 0f;
+                if (UnityEngine.Input.GetKey(KeyCode.RightArrow))
+                    axis += 1f;
+                if (UnityEngine.Input.GetKey(KeyCode.LeftArrow))
+                    axis -= 1f;
 
-            return Mathf.Clamp(axis, -1f, 1f);
+                return Mathf.Clamp(axis, -1f, 1f);
+            }
+            catch
+            {
+                return 0f;
+            }
 #endif
         }
 
@@ -105,7 +126,7 @@ namespace Contrast.Input
 
             return kb.xKey.wasPressedThisFrame;
 #else
-            return UnityEngine.Input.GetKeyDown(KeyCode.X);
+            try { return UnityEngine.Input.GetKeyDown(KeyCode.X); } catch { return false; }
 #endif
         }
 
@@ -125,10 +146,16 @@ namespace Contrast.Input
 
                 return 0;
 #else
-                if (UnityEngine.Input.GetKeyDown(KeyCode.UpArrow))
-                    return 1;
-                if (UnityEngine.Input.GetKeyDown(KeyCode.DownArrow))
-                    return -1;
+                try
+                {
+                    if (UnityEngine.Input.GetKeyDown(KeyCode.UpArrow))
+                        return 1;
+                    if (UnityEngine.Input.GetKeyDown(KeyCode.DownArrow))
+                        return -1;
+                }
+                catch
+                {
+                }
 
                 return 0;
 #endif
@@ -164,20 +191,26 @@ namespace Contrast.Input
                     }
                 }
 #else
-                if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha1) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad1))
+                try
                 {
-                    color = LogicalColor.White;
-                    return true;
+                    if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha1) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad1))
+                    {
+                        color = LogicalColor.White;
+                        return true;
+                    }
+                    if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha2) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad2))
+                    {
+                        color = LogicalColor.Gray;
+                        return true;
+                    }
+                    if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha3) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad3))
+                    {
+                        color = LogicalColor.Black;
+                        return true;
+                    }
                 }
-                if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha2) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad2))
+                catch
                 {
-                    color = LogicalColor.Gray;
-                    return true;
-                }
-                if (UnityEngine.Input.GetKeyDown(KeyCode.Alpha3) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad3))
-                {
-                    color = LogicalColor.Black;
-                    return true;
                 }
 #endif
                 color = LogicalColor.White;
@@ -205,8 +238,16 @@ namespace Contrast.Input
                 prevSpacePressed = false;
             }
 #else
-            prevWPressed = UnityEngine.Input.GetKey(KeyCode.W);
-            prevSpacePressed = UnityEngine.Input.GetKey(KeyCode.Space);
+            try
+            {
+                prevWPressed = UnityEngine.Input.GetKey(KeyCode.W);
+                prevSpacePressed = UnityEngine.Input.GetKey(KeyCode.Space);
+            }
+            catch
+            {
+                prevWPressed = false;
+                prevSpacePressed = false;
+            }
 #endif
         }
     }

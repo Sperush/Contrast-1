@@ -31,7 +31,11 @@ namespace Contrast.UI
                 titleText = existingPanel.Find("Title")?.GetComponent<Text>();
                 subText = existingPanel.Find("Subtitle")?.GetComponent<Text>();
                 if (titleText != null && subText != null)
+                {
+                    if (panel != null)
+                        LabStyleUI.CrispenTextHierarchy(panel.transform);
                     return;
+                }
                 panel = null;
             }
 
@@ -45,6 +49,8 @@ namespace Contrast.UI
             }
 
             BuildUI();
+            if (panel != null)
+                LabStyleUI.CrispenTextHierarchy(panel.transform);
         }
 
         public void Show(bool visible, string customTitle = null, string customSubtitle = null)

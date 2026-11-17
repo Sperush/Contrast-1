@@ -138,6 +138,7 @@ namespace Contrast.Presentation
             BuildControlHint(canvasGo.transform);
             BuildCheckpointToast(canvasGo.transform);
             BuildQuangDiemHud(canvasGo.transform);
+            LabStyleUI.CrispenTextHierarchy(canvasGo.transform);
         }
 
         private void BuildQuangDiemHud(Transform parent)

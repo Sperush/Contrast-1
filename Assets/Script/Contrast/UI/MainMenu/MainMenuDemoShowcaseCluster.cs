@@ -273,7 +273,15 @@ namespace Contrast.UI
                 {
                     demoRuleCaptionText = rTxt.GetComponent<Text>();
                     if (demoRuleCaptionText != null)
+                    {
                         demoRuleCaptionText.fontSize = 13;
+                        RectTransform rTxtRt = demoRuleCaptionText.GetComponent<RectTransform>();
+                        if (rTxtRt != null)
+                        {
+                            MainMenuUIBuilder.Stretch(rTxtRt);
+                            rTxtRt.localScale = Vector3.one;
+                        }
+                    }
                 }
             }
 
@@ -395,13 +403,14 @@ namespace Contrast.UI
                 lblRt.anchorMax = Vector2.one;
                 lblRt.offsetMin = new Vector2(36f, 0f);
                 lblRt.offsetMax = new Vector2(-10f, 0f);
+                lblRt.localScale = Vector3.one;
             }
         }
 
-        private void UpgradeOrBindDemoPhaseBar(Transform barWrap)
+        private void UpgradeOrBindDemoPhaseBar(Transform barWrap, bool isNewBuild = false)
         {
             RectTransform bwRt = barWrap.GetComponent<RectTransform>();
-            if (bwRt != null)
+            if (bwRt != null && (isNewBuild || bwRt.sizeDelta.x < 100f))
             {
                 bwRt.sizeDelta = new Vector2(796f, 146f);
                 bwRt.anchoredPosition = new Vector2(0f, -278f);
@@ -515,13 +524,17 @@ namespace Contrast.UI
         private static void EnsureThreePhaseHeaderBanner(Transform barWrap)
         {
             Transform headerTr = barWrap.Find("PhaseSectionHeader");
-            GameObject headerGo = headerTr != null
+            bool isNewHeader = headerTr == null;
+            GameObject headerGo = !isNewHeader
                 ? headerTr.gameObject
                 : MainMenuUIBuilder.NewUI("PhaseSectionHeader", barWrap);
 
-            RectTransform hRt = headerGo.GetComponent<RectTransform>();
-            hRt.anchoredPosition = new Vector2(0f, 52f);
-            hRt.sizeDelta = new Vector2(796f, 30f);
+            if (isNewHeader)
+            {
+                RectTransform hRt = headerGo.GetComponent<RectTransform>();
+                hRt.anchoredPosition = new Vector2(0f, 52f);
+                hRt.sizeDelta = new Vector2(796f, 30f);
+            }
 
             // Left horizontal glowing cyan line
             CreateOrUpdateDecorativeImage(
@@ -561,7 +574,8 @@ namespace Contrast.UI
 
             // Center chamfered pill badge ("3 Pha Giao Thoa")
             Transform badgeTr = headerGo.transform.Find("HeaderBadge");
-            GameObject badgeGo = badgeTr != null
+            bool isNewBadge = badgeTr == null;
+            GameObject badgeGo = !isNewBadge
                 ? badgeTr.gameObject
                 : MainMenuUIBuilder.NewUI("HeaderBadge", headerGo.transform);
 
@@ -575,9 +589,12 @@ namespace Contrast.UI
             badgeOut.effectColor = new Color(0.32f, 0.86f, 1.00f, 0.72f);
             badgeOut.effectDistance = new Vector2(1.2f, -1.2f);
 
-            RectTransform bRt = badgeGo.GetComponent<RectTransform>();
-            bRt.anchoredPosition = Vector2.zero;
-            bRt.sizeDelta = new Vector2(198f, 28f);
+            if (isNewBadge)
+            {
+                RectTransform bRt = badgeGo.GetComponent<RectTransform>();
+                bRt.anchoredPosition = Vector2.zero;
+                bRt.sizeDelta = new Vector2(198f, 28f);
+            }
 
             Transform txtTr = badgeGo.transform.Find("HeaderText");
             Text hTxt;
@@ -606,6 +623,12 @@ namespace Contrast.UI
                     hTxt.fontStyle = FontStyle.Bold;
                     hTxt.color = Color.white;
                     hTxt.alignment = TextAnchor.MiddleCenter;
+                    RectTransform hTxtRt = hTxt.GetComponent<RectTransform>();
+                    if (hTxtRt != null)
+                    {
+                        hTxtRt.sizeDelta = new Vector2(190f, 28f);
+                        hTxtRt.localScale = Vector3.one;
+                    }
                 }
             }
         }
@@ -619,15 +642,19 @@ namespace Contrast.UI
             Vector2 size)
         {
             Transform tr = parent.Find(name);
-            GameObject go = tr != null ? tr.gameObject : MainMenuUIBuilder.NewUI(name, parent);
+            bool isNew = tr == null;
+            GameObject go = !isNew ? tr.gameObject : MainMenuUIBuilder.NewUI(name, parent);
             Image img = go.GetComponent<Image>() ?? go.AddComponent<Image>();
             img.sprite = sprite;
             img.type = Image.Type.Simple;
             img.color = color;
             img.raycastTarget = false;
-            RectTransform rt = go.GetComponent<RectTransform>();
-            rt.anchoredPosition = pos;
-            rt.sizeDelta = size;
+            if (isNew)
+            {
+                RectTransform rt = go.GetComponent<RectTransform>();
+                rt.anchoredPosition = pos;
+                rt.sizeDelta = size;
+            }
         }
 
         private void ResetVisualMarkers()
@@ -1548,7 +1575,7 @@ namespace Contrast.UI
         private void BuildDemoPhaseBar(Transform stageTransform)
         {
             GameObject barWrap = MainMenuUIBuilder.NewUI("DemoPhaseBarWrap", stageTransform);
-            UpgradeOrBindDemoPhaseBar(barWrap.transform);
+            UpgradeOrBindDemoPhaseBar(barWrap.transform, true);
         }
 
         private static void ConfigureOrUpgradeDemoSegment(
@@ -1629,7 +1656,9 @@ namespace Contrast.UI
                 tagTxt.fontStyle = FontStyle.Bold;
                 tagTxt.color = Color.white;
                 tagTxt.alignment = TextAnchor.MiddleCenter;
-                MainMenuUIBuilder.Stretch(tagTxt.GetComponent<RectTransform>());
+                RectTransform tagTxtRt = tagTxt.GetComponent<RectTransform>();
+                MainMenuUIBuilder.Stretch(tagTxtRt);
+                tagTxtRt.localScale = Vector3.one;
             }
 
             CreateOrUpdateDecorativeImage(
@@ -1687,6 +1716,7 @@ namespace Contrast.UI
                 lblRt.pivot = new Vector2(0.5f, 0.5f);
                 lblRt.offsetMin = new Vector2(78f, 4f);
                 lblRt.offsetMax = new Vector2(-8f, 26f);
+                lblRt.localScale = Vector3.one;
             }
 
             // 5. Line 2: In-Game Color Label ("Màu Trắng" / "Màu Xám" / "Màu Đen")
@@ -1708,6 +1738,7 @@ namespace Contrast.UI
                 colRt.pivot = new Vector2(0.5f, 0.5f);
                 colRt.offsetMin = new Vector2(78f, -15f);
                 colRt.offsetMax = new Vector2(-8f, 5f);
+                colRt.localScale = Vector3.one;
             }
 
             // 6. Line 3: Physical Phase Relation ("Cùng pha (Δφ=0°)" / "Lệch pha (Δφ≈90°)" / "Ngược pha (Δφ=180°)")
@@ -1729,6 +1760,7 @@ namespace Contrast.UI
                 natRt.pivot = new Vector2(0.5f, 0.5f);
                 natRt.offsetMin = new Vector2(78f, -34f);
                 natRt.offsetMax = new Vector2(-8f, -14f);
+                natRt.localScale = Vector3.one;
             }
         }
     }

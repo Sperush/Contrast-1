@@ -40,7 +40,11 @@ namespace Contrast.UI
 
             Transform existingPanel = transform.Find("Canvas/Panel");
             if (existingPanel != null && TryBindExistingUI(existingPanel))
+            {
+                if (panel != null)
+                    LabStyleUI.CrispenTextHierarchy(panel.transform);
                 return;
+            }
 
             Transform staleCanvas = transform.Find("Canvas");
             if (staleCanvas != null)
@@ -52,6 +56,8 @@ namespace Contrast.UI
             }
 
             BuildUI();
+            if (panel != null)
+                LabStyleUI.CrispenTextHierarchy(panel.transform);
         }
 
         private bool TryBindExistingUI(Transform existingPanel)
@@ -146,6 +152,7 @@ namespace Contrast.UI
 
         private void OnMenuClicked()
         {
+            Debug.Log("[UI_BUTTON][GameControlUI] Clicked BackPillButton/MENUButton -> OpenInGameMenu");
             EventSystem.current?.SetSelectedGameObject(null);
             ContrastAudioManager.Instance?.PlayButtonClick();
             GameManager.Instance?.OpenInGameMenu();
@@ -153,6 +160,7 @@ namespace Contrast.UI
 
         private void OnRestartClicked()
         {
+            Debug.Log("[UI_BUTTON][GameControlUI] Clicked RESTARTButton -> Restart level");
             EventSystem.current?.SetSelectedGameObject(null);
             ContrastAudioManager.Instance?.PlayButtonClick();
             GameManager.Instance?.Restart();
@@ -160,6 +168,7 @@ namespace Contrast.UI
 
         private void OnRetryClicked()
         {
+            Debug.Log("[UI_BUTTON][GameControlUI] Clicked RETRYButton -> Retry checkpoint");
             EventSystem.current?.SetSelectedGameObject(null);
             ContrastAudioManager.Instance?.PlayButtonClick();
             GameManager.Instance?.Retry();
@@ -167,6 +176,7 @@ namespace Contrast.UI
 
         private void OnFullscreenClicked()
         {
+            Debug.Log("[UI_BUTTON][GameControlUI] Clicked FullscreenButton -> ToggleFullscreen");
             EventSystem.current?.SetSelectedGameObject(null);
             ContrastAudioManager.Instance?.PlayButtonClick();
             Screen.fullScreen = !Screen.fullScreen;
@@ -174,6 +184,7 @@ namespace Contrast.UI
 
         private void OnGuideClicked()
         {
+            Debug.Log("[UI_BUTTON][GameControlUI] Clicked GuideButton -> ToggleUserGuide");
             EventSystem.current?.SetSelectedGameObject(null);
             ContrastAudioManager.Instance?.PlayButtonClick();
             PhaseTunerUI tuner = PhaseTunerUI.Instance ?? Contrast.Core.UnityCompat.FindAny<PhaseTunerUI>();
@@ -381,16 +392,7 @@ namespace Contrast.UI
 
         private static void EnsureEventSystem()
         {
-            if (Contrast.Core.UnityCompat.FindAny<EventSystem>() != null)
-                return;
-
-            GameObject go = new GameObject("EventSystem");
-            go.AddComponent<EventSystem>();
-#if ENABLE_INPUT_SYSTEM
-            go.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-            go.AddComponent<StandaloneInputModule>();
-#endif
+            LabStyleUI.EnsureEventSystem();
         }
     }
 }

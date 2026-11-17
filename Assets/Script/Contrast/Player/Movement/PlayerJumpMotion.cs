@@ -55,10 +55,17 @@ namespace Contrast.Player
 
             rb.simulated = false;
             rb.bodyType = RigidbodyType2D.Dynamic;
+#if UNITY_6000_0_OR_NEWER
+            rb.linearDamping = 0f;
+            rb.angularDamping = 0f;
+            rb.freezeRotation = true;
+            rb.linearVelocity = Vector2.zero;
+#else
             rb.drag = 0f;
             rb.angularDrag = 0f;
             rb.freezeRotation = true;
             rb.velocity = Vector2.zero;
+#endif
             rb.angularVelocity = 0f;
             verticalVelocity = 0f;
 
@@ -97,9 +104,15 @@ namespace Contrast.Player
 
             if (rb != null && rb.bodyType != RigidbodyType2D.Static)
             {
+#if UNITY_6000_0_OR_NEWER
+                Vector2 velocity = rb.linearVelocity;
+                velocity.y = jumpVelocity;
+                rb.linearVelocity = velocity;
+#else
                 Vector2 velocity = rb.velocity;
                 velocity.y = jumpVelocity;
                 rb.velocity = velocity;
+#endif
             }
             jumping = true;
 
@@ -117,12 +130,21 @@ namespace Contrast.Player
             {
                 verticalVelocity = 0f;
             }
+#if UNITY_6000_0_OR_NEWER
+            if (rb != null && rb.bodyType != RigidbodyType2D.Static && rb.linearVelocity.y > 0f)
+            {
+                Vector2 velocity = rb.linearVelocity;
+                velocity.y = 0f;
+                rb.linearVelocity = velocity;
+            }
+#else
             if (rb != null && rb.bodyType != RigidbodyType2D.Static && rb.velocity.y > 0f)
             {
                 Vector2 velocity = rb.velocity;
                 velocity.y = 0f;
                 rb.velocity = velocity;
             }
+#endif
         }
 
         public Vector2 GetMoveIntent(float deltaTime, bool isGrounded)
@@ -142,7 +164,11 @@ namespace Contrast.Player
             }
 
             float gravity = ResolveGravity();
+#if UNITY_6000_0_OR_NEWER
+            Vector2 velocity = new Vector2(rb != null ? rb.linearVelocity.x : 0f, verticalVelocity);
+#else
             Vector2 velocity = new Vector2(rb != null ? rb.velocity.x : 0f, verticalVelocity);
+#endif
 
             if (fastFall)
             {
@@ -154,7 +180,13 @@ namespace Contrast.Player
             velocity.y = Mathf.Max(velocity.y, -maxFallSpeed);
             verticalVelocity = velocity.y;
             if (rb != null && rb.bodyType != RigidbodyType2D.Static)
+            {
+#if UNITY_6000_0_OR_NEWER
+                rb.linearVelocity = velocity;
+#else
                 rb.velocity = velocity;
+#endif
+            }
 
             Vector2 intent = Vector2.up * (velocity.y * deltaTime);
 
@@ -192,9 +224,15 @@ namespace Contrast.Player
             if (rb == null || rb.bodyType == RigidbodyType2D.Static)
                 return;
 
+#if UNITY_6000_0_OR_NEWER
+            Vector2 velocity = rb.linearVelocity;
+            velocity.y = value;
+            rb.linearVelocity = velocity;
+#else
             Vector2 velocity = rb.velocity;
             velocity.y = value;
             rb.velocity = velocity;
+#endif
         }
     }
 }

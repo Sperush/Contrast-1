@@ -59,6 +59,7 @@ namespace Contrast.UI
 
         private GameObject panel;
         private GameObject cardsRoot;
+        private bool boundInPlayMode;
 
         private readonly MainMenuBackdropCluster backdropCluster = new MainMenuBackdropCluster();
         private readonly MainMenuPlayPanelCluster playPanelCluster = new MainMenuPlayPanelCluster();
@@ -84,6 +85,11 @@ namespace Contrast.UI
 
         private void Awake()
         {
+            if (Application.isPlaying)
+            {
+                boundInPlayMode = false;
+                panel = null;
+            }
             EnsureInitialized();
             bool isMainMenuScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name == GameManager.MainMenuSceneName;
             if (isMainMenuScene && GameManager.Instance == null)
@@ -94,9 +100,18 @@ namespace Contrast.UI
 
         private void Start()
         {
-            if (Application.isPlaying && GameManager.Instance == null)
+            if (Application.isPlaying)
             {
-                Show(true);
+                EnsureEventSystem();
+                if (!boundInPlayMode)
+                {
+                    panel = null;
+                    EnsureInitialized();
+                }
+                if (GameManager.Instance == null)
+                {
+                    Show(true);
+                }
             }
         }
 
@@ -122,6 +137,7 @@ namespace Contrast.UI
         [ContextMenu("Build / Refresh Main Menu UI In Scene")]
         public void RebuildMenuUIInScene()
         {
+            boundInPlayMode = false;
             panel = null;
             EnsureInitialized();
             Show(true);
@@ -129,17 +145,22 @@ namespace Contrast.UI
 
         public void EnsureInitialized()
         {
-            if (panel != null)
-                return;
-
             EnsureEventSystem();
+
+            if (panel != null && (!Application.isPlaying || boundInPlayMode))
+                return;
 
             Transform existingPanel = transform.Find("Canvas/Panel");
             if (existingPanel != null && TryBindExistingUI(existingPanel))
             {
                 if (Application.isPlaying)
+                {
+                    boundInPlayMode = true;
                     settingsCluster.BindAudioSettings();
+                }
                 UpdateAnimatedBackdropAndDemo(0.8f, 0.016f);
+                if (panel != null)
+                    LabStyleUI.CrispenTextHierarchy(panel.transform);
                 return;
             }
 
@@ -153,13 +174,35 @@ namespace Contrast.UI
             }
 
             BuildUI();
+            if (panel != null)
+                LabStyleUI.CrispenTextHierarchy(panel.transform);
             if (Application.isPlaying)
+            {
+                boundInPlayMode = true;
                 settingsCluster.BindAudioSettings();
+            }
         }
 
         private bool TryBindExistingUI(Transform existingPanel)
         {
             panel = existingPanel.gameObject;
+            Transform canvasTr = existingPanel.parent;
+            if (canvasTr != null)
+            {
+                Canvas c = canvasTr.GetComponent<Canvas>();
+                if (c != null)
+                {
+                    c.enabled = true;
+                    c.renderMode = RenderMode.ScreenSpaceOverlay;
+                    c.pixelPerfect = true;
+                    c.sortingOrder = 200;
+                }
+                GraphicRaycaster gr = canvasTr.GetComponent<GraphicRaycaster>();
+                if (gr == null)
+                    gr = canvasTr.gameObject.AddComponent<GraphicRaycaster>();
+                gr.enabled = true;
+            }
+
             Image bg = panel.GetComponent<Image>();
             if (bg != null)
             {
@@ -217,17 +260,20 @@ namespace Contrast.UI
 
         public void OpenSettings()
         {
+            Debug.Log("[UI_BUTTON][MainMenu] Clicked SettingsButton -> OpenSettings");
             EnsureInitialized();
             settingsCluster.Open();
         }
 
         public void CloseSettings()
         {
+            Debug.Log("[UI_BUTTON][MainMenuSettings] Clicked CloseSettingsButton -> CloseSettings");
             settingsCluster.Close();
         }
 
         public void QuitApplication()
         {
+            Debug.Log("[UI_BUTTON][MainMenu] Clicked ExitButton -> QuitApplication");
             ContrastAudioManager.Instance?.PlayButtonClick();
             if (GameManager.Instance != null)
             {
@@ -245,12 +291,14 @@ namespace Contrast.UI
 
         public void SelectPlayFromBeginning()
         {
+            Debug.Log("[UI_BUTTON][MainMenu] Clicked PlayFromStartButton -> LaunchCampaignFromMainMenu(0)");
             ContrastAudioManager.Instance?.PlayButtonClick();
             GameManager.LaunchCampaignFromMainMenu(0);
         }
 
         public void SelectDirectLevel(int levelIndex)
         {
+            Debug.Log($"[UI_BUTTON][MainMenu] Clicked SelectLevel_L0{levelIndex + 1} -> LaunchCampaignFromMainMenu({levelIndex})");
             ContrastAudioManager.Instance?.PlayButtonClick();
             GameManager.LaunchCampaignFromMainMenu(levelIndex);
         }
@@ -323,6 +371,7 @@ namespace Contrast.UI
             GameObject canvasGo = MainMenuUIBuilder.NewUI("Canvas", transform);
             Canvas canvas = canvasGo.AddComponent<Canvas>();
             canvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            canvas.pixelPerfect = true;
             canvas.sortingOrder = 200;
 
             CanvasScaler scaler = canvasGo.AddComponent<CanvasScaler>();
@@ -370,16 +419,7 @@ namespace Contrast.UI
 
         private static void EnsureEventSystem()
         {
-            if (Contrast.Core.UnityCompat.FindAny<EventSystem>() != null)
-                return;
-
-            GameObject go = new GameObject("EventSystem");
-            go.AddComponent<EventSystem>();
-#if ENABLE_INPUT_SYSTEM
-            go.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-            go.AddComponent<StandaloneInputModule>();
-#endif
+            LabStyleUI.EnsureEventSystem();
         }
 
         private static bool IsEscapePressed()
@@ -388,7 +428,7 @@ namespace Contrast.UI
             Keyboard kb = Keyboard.current;
             return kb != null && kb.escapeKey.wasPressedThisFrame;
 #else
-            return Input.GetKeyDown(KeyCode.Escape);
+            return UnityEngine.Input.GetKeyDown(KeyCode.Escape);
 #endif
         }
 
@@ -398,7 +438,7 @@ namespace Contrast.UI
             Keyboard kb = Keyboard.current;
             return kb != null && (kb.digit1Key.wasPressedThisFrame || kb.numpad1Key.wasPressedThisFrame);
 #else
-            return Input.GetKeyDown(KeyCode.Alpha1) || Input.GetKeyDown(KeyCode.Keypad1);
+            return UnityEngine.Input.GetKeyDown(KeyCode.Alpha1) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad1);
 #endif
         }
 
@@ -408,7 +448,7 @@ namespace Contrast.UI
             Keyboard kb = Keyboard.current;
             return kb != null && (kb.digit2Key.wasPressedThisFrame || kb.numpad2Key.wasPressedThisFrame);
 #else
-            return Input.GetKeyDown(KeyCode.Alpha2) || Input.GetKeyDown(KeyCode.Keypad2);
+            return UnityEngine.Input.GetKeyDown(KeyCode.Alpha2) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad2);
 #endif
         }
 
@@ -418,7 +458,7 @@ namespace Contrast.UI
             Keyboard kb = Keyboard.current;
             return kb != null && (kb.digit3Key.wasPressedThisFrame || kb.numpad3Key.wasPressedThisFrame);
 #else
-            return Input.GetKeyDown(KeyCode.Alpha3) || Input.GetKeyDown(KeyCode.Keypad3);
+            return UnityEngine.Input.GetKeyDown(KeyCode.Alpha3) || UnityEngine.Input.GetKeyDown(KeyCode.Keypad3);
 #endif
         }
 
@@ -428,7 +468,7 @@ namespace Contrast.UI
             Keyboard kb = Keyboard.current;
             return kb != null && (kb.enterKey.wasPressedThisFrame || kb.spaceKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame);
 #else
-            return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space) || Input.GetKeyDown(KeyCode.KeypadEnter);
+            return UnityEngine.Input.GetKeyDown(KeyCode.Return) || UnityEngine.Input.GetKeyDown(KeyCode.Space) || UnityEngine.Input.GetKeyDown(KeyCode.KeypadEnter);
 #endif
         }
     }

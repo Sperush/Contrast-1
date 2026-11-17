@@ -45,7 +45,11 @@ namespace Contrast.UI
 
             Transform existingPanel = transform.Find("Canvas/Panel");
             if (existingPanel != null && TryBindExistingUI(existingPanel))
+            {
+                if (panel != null)
+                    LabStyleUI.CrispenTextHierarchy(panel.transform);
                 return;
+            }
 
             Transform staleCanvas = transform.Find("Canvas");
             if (staleCanvas != null)
@@ -57,6 +61,8 @@ namespace Contrast.UI
             }
 
             BuildUI();
+            if (panel != null)
+                LabStyleUI.CrispenTextHierarchy(panel.transform);
         }
 
         private bool TryBindExistingUI(Transform existingPanel)
@@ -250,12 +256,14 @@ namespace Contrast.UI
 
         private void OnResumeClicked()
         {
+            Debug.Log("[UI_BUTTON][InGameMenuUI] Clicked ResumeButton -> ResumeGame");
             ContrastAudioManager.Instance?.PlayButtonClick();
             GameManager.Instance?.ResumeGame();
         }
 
         private void OnRestartClicked()
         {
+            Debug.Log("[UI_BUTTON][InGameMenuUI] Clicked RestartButton -> Restart level");
             ContrastAudioManager.Instance?.PlayButtonClick();
             Show(false);
             GameManager.Instance?.Restart();
@@ -263,6 +271,7 @@ namespace Contrast.UI
 
         private void OnReturnClicked()
         {
+            Debug.Log("[UI_BUTTON][InGameMenuUI] Clicked ReturnButton -> ReturnFromGameplay");
             ContrastAudioManager.Instance?.PlayButtonClick();
             Show(false);
             GameManager.Instance?.ReturnFromGameplay();
@@ -576,16 +585,7 @@ namespace Contrast.UI
 
         private static void EnsureEventSystem()
         {
-            if (Contrast.Core.UnityCompat.FindAny<EventSystem>() != null)
-                return;
-
-            GameObject go = new GameObject("EventSystem");
-            go.AddComponent<EventSystem>();
-#if ENABLE_INPUT_SYSTEM
-            go.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
-#else
-            go.AddComponent<StandaloneInputModule>();
-#endif
+            LabStyleUI.EnsureEventSystem();
         }
     }
 }

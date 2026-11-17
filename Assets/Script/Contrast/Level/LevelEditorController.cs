@@ -977,6 +977,20 @@ namespace Contrast.Level
                 bounds.center.y - worldOffsetY,
                 camPos.z);
 
+            UnityEngine.Camera[] allCams = UnityEngine.Camera.allCameras;
+            for (int i = 0; i < allCams.Length; i++)
+            {
+                UnityEngine.Camera c = allCams[i];
+                if (c != null && c != cam && c.CompareTag("MainCamera"))
+                {
+                    c.orthographicSize = targetOrthoSize;
+                    c.transform.position = new Vector3(
+                        bounds.center.x - worldOffsetX,
+                        bounds.center.y - worldOffsetY,
+                        c.transform.position.z);
+                }
+            }
+
             ui?.SetStatus("Fit Map: Framed entire level.");
             LogEditor($"[EDITOR][FIT_MAP] bounds={bounds} orthoSize={targetOrthoSize} camPos={cam.transform.position}");
         }

@@ -167,6 +167,15 @@ namespace Contrast.Core
 
             if (gameOverUI == null)
                 gameOverUI = new GameObject("GameOverUI").AddComponent<GameOverUI>();
+            else
+            {
+                GameOverUI[] allGameOvers = Contrast.Core.UnityCompat.FindAll<GameOverUI>(true);
+                for (int i = 0; i < allGameOvers.Length; i++)
+                {
+                    if (allGameOvers[i] != null && allGameOvers[i] != gameOverUI)
+                        allGameOvers[i].gameObject.SetActive(false);
+                }
+            }
 
             if (gameControlUI == null)
                 gameControlUI = new GameObject("GameControlUI").AddComponent<GameControlUI>();
@@ -919,7 +928,7 @@ namespace Contrast.Core
             Keyboard kb = Keyboard.current;
             return kb != null && kb.escapeKey.wasPressedThisFrame;
 #else
-            return Input.GetKeyDown(KeyCode.Escape);
+            return UnityEngine.Input.GetKeyDown(KeyCode.Escape);
 #endif
         }
 
@@ -929,7 +938,7 @@ namespace Contrast.Core
             Keyboard kb = Keyboard.current;
             return kb != null && kb.tKey.wasPressedThisFrame;
 #else
-            return Input.GetKeyDown(KeyCode.T);
+            return UnityEngine.Input.GetKeyDown(KeyCode.T);
 #endif
         }
 
@@ -947,7 +956,7 @@ namespace Contrast.Core
             Keyboard kb = Keyboard.current;
             return kb != null && kb.rKey.wasPressedThisFrame;
 #else
-            return Input.GetKeyDown(KeyCode.R);
+            return UnityEngine.Input.GetKeyDown(KeyCode.R);
 #endif
         }
 
@@ -958,7 +967,7 @@ namespace Contrast.Core
             return kb != null &&
                    (kb.enterKey.wasPressedThisFrame || kb.numpadEnterKey.wasPressedThisFrame);
 #else
-            return Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter);
+            return UnityEngine.Input.GetKeyDown(KeyCode.Return) || UnityEngine.Input.GetKeyDown(KeyCode.KeypadEnter);
 #endif
         }
 
@@ -969,7 +978,7 @@ namespace Contrast.Core
             return kb != null &&
                    (kb.rKey.wasPressedThisFrame || kb.enterKey.wasPressedThisFrame);
 #else
-            return Input.GetKeyDown(KeyCode.R) || Input.GetKeyDown(KeyCode.Return);
+            return UnityEngine.Input.GetKeyDown(KeyCode.R) || UnityEngine.Input.GetKeyDown(KeyCode.Return);
 #endif
         }
     }

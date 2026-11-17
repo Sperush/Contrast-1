@@ -31,6 +31,10 @@ namespace Contrast.Level
     {
         public static EasyNewtonFinaleController Instance { get; private set; }
 
+        public const int MaxFringeOrderK = 5;
+        public const float Level2BaseNewtonOrthoSize = 8.6f;
+        public const float UnifiedNewtonOrthoSize = Level2BaseNewtonOrthoSize * 1.15f; // 9.89f
+
         [Header("Chamber Geometry")]
         [SerializeField] private Vector2 centerO = new Vector2(61.0f, 0.625f);
         [SerializeField] private float ringScale = 3.4375f; // 220 px / 64
@@ -39,6 +43,9 @@ namespace Contrast.Level
         [SerializeField] private float radiusOfCurvatureMm = 855f; // R = 855 mm
         [SerializeField] private int fringeOrderK = 4;
         [SerializeField] private int fringeOrderI = 2;
+
+        public int FringeOrderK => fringeOrderK;
+        public int FringeOrderI => fringeOrderI;
 
         [Header("Platform Parameters")]
         [SerializeField] private Vector2 platformSizeK = new Vector2(2.125f, 0.34375f); // 136 x 22 px / 64
@@ -192,12 +199,10 @@ namespace Contrast.Level
 
         public void ComputeNewtonCameraFraming(out Vector3 fixedWorldCenter, out float orthoSize)
         {
-            // HTML prototype (newtonViewLayout in CONTRAST_3_LEVELS_Newton_Fixed_Windowed.html):
-            // Fixed world-space camera anchored on Newton center O = (cx, cy), scaled so the outer dark ring k
-            // and all 3 targets (K, I, K') plus orbiting platforms K & I remain simultaneously inside the frame.
-            float rK = GetRadiusForOrder(fringeOrderK);
+            // Level 2 Newton camera size increased by 15% (8.6 * 1.15 = 9.89) and unified across all levels,
+            // with fringeOrderK clamped to <= MaxFringeOrderK (5).
             fixedWorldCenter = new Vector3(centerO.x, centerO.y, -10f);
-            orthoSize = Mathf.Max(8.6f, (rK + 0.70f) / 0.89f);
+            orthoSize = UnifiedNewtonOrthoSize;
         }
 
         /// <summary>
@@ -234,23 +239,21 @@ namespace Contrast.Level
             {
                 // Authoritative pre-Newton platform left boundary fallback when terrain platforms
                 // are not instantiated in isolated unit tests:
-                // L02 (k=4): 67.617188 - 1.953125 * 0.5 = 66.6406255f
-                // L01 (k=6): 68.414062 - 2.890625 * 0.5 = 66.9687495f
-                // L03 (k=7): 65.75 - 6.84375 * 0.5      = 62.3281250f
-                switch (fringeOrderK)
+                if (fringeOrderK == 4)
                 {
-                    case 4:
-                        thresholdX = 67.617188f - 1.953125f * 0.5f;
-                        break;
-                    case 6:
-                        thresholdX = 68.414062f - 2.890625f * 0.5f;
-                        break;
-                    case 7:
-                        thresholdX = 65.75f - 6.84375f * 0.5f;
-                        break;
-                    default:
-                        thresholdX = centerO.x - ringScale * 3.84f;
-                        break;
+                    thresholdX = 67.617188f - 1.953125f * 0.5f;
+                }
+                else if (fringeOrderI == 3 || Mathf.Abs(sourceLambda - 550f) < 1f)
+                {
+                    thresholdX = 68.414062f - 2.890625f * 0.5f;
+                }
+                else if (fringeOrderI == 2 && Mathf.Abs(sourceLambda - 470f) < 1f)
+                {
+                    thresholdX = 65.75f - 6.84375f * 0.5f;
+                }
+                else
+                {
+                    thresholdX = centerO.x - ringScale * 3.84f;
                 }
             }
         }
@@ -303,16 +306,18 @@ namespace Contrast.Level
             if (newtonData != null)
             {
                 centerO = new Vector2(newtonData.cx / 64f, -newtonData.cy / 64f);
-                fringeOrderK = newtonData.k;
-                fringeOrderI = newtonData.i;
+                int rawK = newtonData.k > 0 ? newtonData.k : 4;
+                int rawI = newtonData.i > 0 ? newtonData.i : 2;
+                fringeOrderK = Mathf.Clamp(rawK, 1, MaxFringeOrderK);
+                fringeOrderI = Mathf.Clamp(rawI, 1, Mathf.Max(1, fringeOrderK - 1));
                 if (newtonData.lambda > 0f)
                 {
                     sourceLambda = newtonData.lambda;
                 }
                 else
                 {
-                    sourceLambda = (fringeOrderK == 4 && fringeOrderI == 2) ? 650f
-                        : (fringeOrderK == 7 && fringeOrderI == 2) ? 470f
+                    sourceLambda = (rawK == 4 && rawI == 2) ? 650f
+                        : (rawK >= 7 && rawI == 2) ? 470f
                         : 550f;
                 }
                 orbitStartMode = string.IsNullOrEmpty(newtonData.orbitStart) ? "auto" : newtonData.orbitStart.ToLowerInvariant();
@@ -331,6 +336,12 @@ namespace Contrast.Level
                     angleI = newtonData.rails.I.angleDeg;
                     dirI = newtonData.rails.I.direction != 0 ? newtonData.rails.I.direction : 1;
                 }
+            }
+
+            else
+            {
+                fringeOrderK = Mathf.Clamp(fringeOrderK, 1, MaxFringeOrderK);
+                fringeOrderI = Mathf.Clamp(fringeOrderI, 1, Mathf.Max(1, fringeOrderK - 1));
             }
 
             dockActive = (orbitStartMode != "dock");
@@ -368,7 +379,7 @@ namespace Contrast.Level
             ringsGo.transform.localPosition = Vector3.zero;
 
             apparatusVisuals = ringsGo.AddComponent<NewtonRingsPresentation>();
-            float outerR = ringScale * Mathf.Sqrt(7f + 0.65f) + 1.5f; // outer optical radius ~10.8 units
+            float outerR = ringScale * Mathf.Sqrt(MaxFringeOrderK + 0.65f) + 1.5f;
             apparatusVisuals.Configure(ringScale, outerR, sourceLambda, referenceLambda);
             apparatusVisuals.SetCenterPosition(centerO);
         }
@@ -376,7 +387,8 @@ namespace Contrast.Level
         public float GetRadiusForOrder(int order)
         {
             if (order <= 0) return 0f;
-            return ringScale * Mathf.Sqrt(order);
+            int clampedOrder = Mathf.Min(order, MaxFringeOrderK);
+            return ringScale * Mathf.Sqrt(clampedOrder);
         }
 
         private void SpawnOrbitPlatforms()
@@ -670,14 +682,21 @@ namespace Contrast.Level
             textGo.transform.SetParent(go.transform, false);
             textGo.transform.localPosition = new Vector3(0f, radius + 0.35f, 0f);
             TextMesh tm = textGo.AddComponent<TextMesh>();
+            Font f = GetFont();
+            if (f != null) tm.font = f;
             tm.text = label;
-            tm.fontSize = 32;
-            tm.characterSize = 0.05f;
+            tm.fontSize = 28;
+            tm.characterSize = 0.055f;
             tm.color = color;
             tm.alignment = TextAlignment.Center;
             tm.anchor = TextAnchor.MiddleCenter;
             MeshRenderer mr = textGo.GetComponent<MeshRenderer>();
-            if (mr != null) mr.sortingOrder = 10;
+            if (mr != null)
+            {
+                if (f != null && f.material != null)
+                    mr.sharedMaterial = f.material;
+                mr.sortingOrder = 10;
+            }
 
             return go;
         }
@@ -700,14 +719,21 @@ namespace Contrast.Level
             textGo.transform.SetParent(go.transform, false);
             textGo.transform.localPosition = new Vector3(0f, 0.55f, 0f);
             TextMesh tm = textGo.AddComponent<TextMesh>();
+            Font f = GetFont();
+            if (f != null) tm.font = f;
             tm.text = label;
-            tm.fontSize = 28;
-            tm.characterSize = 0.045f;
+            tm.fontSize = 26;
+            tm.characterSize = 0.052f;
             tm.color = new Color(0.88f, 0.95f, 1f, 0.85f);
             tm.alignment = TextAlignment.Center;
             tm.anchor = TextAnchor.MiddleCenter;
             MeshRenderer mr = textGo.GetComponent<MeshRenderer>();
-            if (mr != null) mr.sortingOrder = 10;
+            if (mr != null)
+            {
+                if (f != null && f.material != null)
+                    mr.sharedMaterial = f.material;
+                mr.sortingOrder = 10;
+            }
 
             return go;
         }
@@ -730,12 +756,14 @@ namespace Contrast.Level
             Text text = textGo.AddComponent<Text>();
             text.font = GetFont();
             text.text = label;
-            text.fontSize = 18;
+            text.fontSize = 24;
             text.alignment = TextAnchor.MiddleCenter;
+            text.horizontalOverflow = HorizontalWrapMode.Overflow;
+            text.verticalOverflow = VerticalWrapMode.Overflow;
             text.color = new Color(0.92f, 0.96f, 1f, 0.9f);
             RectTransform trt = textGo.GetComponent<RectTransform>();
-            trt.sizeDelta = new Vector2(2f, 0.6f);
-            trt.localScale = Vector3.one * 0.02f;
+            trt.sizeDelta = new Vector2(240f, 50f);
+            trt.localScale = Vector3.one * 0.015f;
 
             return text;
         }
@@ -747,6 +775,7 @@ namespace Contrast.Level
 
             hudCanvas = hudCanvasGo.AddComponent<Canvas>();
             hudCanvas.renderMode = RenderMode.ScreenSpaceOverlay;
+            hudCanvas.pixelPerfect = true;
             hudCanvas.sortingOrder = 85; // Above gameplay/PhaseTuner, below GameControlUI (90) & Pause/Win modals (210+)
 
             CanvasScaler scaler = hudCanvasGo.AddComponent<CanvasScaler>();
@@ -823,7 +852,11 @@ namespace Contrast.Level
             enterBtn.navigation = new Navigation { mode = Navigation.Mode.None };
             enterBtn.targetGraphic = enterBg;
             enterBtn.colors = LabStyleUI.MakeButtonColorBlock();
-            enterBtn.onClick.AddListener(OnPlayerNewtonMarkInput);
+            enterBtn.onClick.AddListener(() =>
+            {
+                Debug.Log("[UI_BUTTON][NewtonHUD] Clicked MarkActionButton (NHẬP) -> OnPlayerNewtonMarkInput");
+                OnPlayerNewtonMarkInput();
+            });
 
             RectTransform enterRt = enterBtnGo.GetComponent<RectTransform>();
             enterRt.anchorMin = new Vector2(0.5f, 0f);
@@ -916,6 +949,8 @@ namespace Contrast.Level
 
             // Completion Overlay (Section 6)
             BuildCompletionPanel();
+
+            LabStyleUI.CrispenTextHierarchy(hudCanvasGo.transform);
 
             hudCanvasGo.SetActive(false);
         }
@@ -1319,11 +1354,14 @@ namespace Contrast.Level
 
             SyncTargetStatesAndColliders();
 
-            // Check dock mode activation: starts orbit when player first lands on platform K
+            // Check dock mode activation: starts orbit when player first lands on platform K (or touches K in Test Mode)
             if (orbitStartMode == "dock" && !dockActive)
             {
                 bool isGroundedOnK = (player != null && player.IsGrounded && player.GroundedPlatform == platformK) || IsPlayerStandingOn(platformK);
-                if (isGroundedOnK)
+                bool isTestTouchK = player != null && player.IsTestModeActive &&
+                    (DoesPlayerOverlapTargetCollider(0, out _, out _) ||
+                     (platformK != null && GetPlayerColliderWorldRect().Overlaps(platformK.GetAabb())));
+                if (isGroundedOnK || isTestTouchK)
                 {
                     dockActive = true;
                     if (trajK != null) trajK.SetTrajectoryEnabled(true);
@@ -1371,9 +1409,6 @@ namespace Contrast.Level
 
         private bool IsNewtonMarkPressedThisFrame()
         {
-            if (player != null && player.IsTestModeActive)
-                return false;
-
             if (player != null && player.NewtonMarkRequested)
                 return true;
 
@@ -1481,12 +1516,6 @@ namespace Contrast.Level
             string eventId = $"X_{markEventSequence:D4}";
             int frame = Time.frameCount;
 
-            if (player != null && player.IsTestModeActive)
-            {
-                LastMarkRejectionReason = "TEST_MODE_ACTIVE";
-                return;
-            }
-
             if (CurrentStep >= NewtonFinaleStep.Reveal)
             {
                 LastMarkRejectionReason = "ALREADY_COMPLETED";
@@ -1510,6 +1539,62 @@ namespace Contrast.Level
 
             bool onK = (player.IsGrounded && player.GroundedPlatform == platformK) || IsPlayerStandingOn(platformK);
             bool onI = (player.IsGrounded && player.GroundedPlatform == platformI) || IsPlayerStandingOn(platformI);
+
+            // In T-Key Test Mode (free mouse movement), allow marking when the player hovers over the active target or orbit platform
+            if (player.IsTestModeActive)
+            {
+                if (CurrentStep == NewtonFinaleStep.CaptureK)
+                {
+                    float rK = GetRadiusForOrder(fringeOrderK);
+                    float distFromRingK = Mathf.Abs(Vector2.Distance(player.transform.position, centerO) - rK);
+                    bool nearRingK = distFromRingK <= 1.25f;
+                    bool overlapsPlatK = platformK != null && pBounds.Overlaps(platformK.GetAabb());
+                    if (overlapsActiveCollider || overlapsPlatK || nearRingK)
+                    {
+                        if (!overlapsActiveCollider && platformK != null)
+                        {
+                            Vector2 dir = ((Vector2)player.transform.position - centerO).normalized;
+                            if (dir.sqrMagnitude < 0.001f) dir = Vector2.left;
+                            Vector2 snapK = centerO + dir * rK;
+                            platformK.transform.position = new Vector3(snapK.x, snapK.y, 0f);
+                        }
+                        if (orbitStartMode == "dock" && !dockActive)
+                        {
+                            dockActive = true;
+                            if (trajK != null) trajK.SetTrajectoryEnabled(true);
+                            if (trajI != null) trajI.SetTrajectoryEnabled(true);
+                        }
+                        onK = true;
+                        overlapsActiveCollider = true;
+                    }
+                }
+                else if (CurrentStep == NewtonFinaleStep.CaptureI)
+                {
+                    bool overlapsPlatI = platformI != null && pBounds.Overlaps(platformI.GetAabb());
+                    if (overlapsActiveCollider || overlapsPlatI)
+                    {
+                        if (overlapsActiveCollider && platformI != null)
+                        {
+                            Vector2 targetI = GetTargetWorldPosition(1);
+                            platformI.transform.position = new Vector3(targetI.x, targetI.y, 0f);
+                        }
+                        onI = true;
+                    }
+                }
+                else if (CurrentStep == NewtonFinaleStep.CaptureKp)
+                {
+                    bool overlapsPlatK = platformK != null && pBounds.Overlaps(platformK.GetAabb());
+                    if (overlapsActiveCollider || overlapsPlatK)
+                    {
+                        if (overlapsActiveCollider && platformK != null)
+                        {
+                            Vector2 targetKp = GetTargetWorldPosition(2);
+                            platformK.transform.position = new Vector3(targetKp.x, targetKp.y, 0f);
+                        }
+                        onK = true;
+                    }
+                }
+            }
 
             if (!onK && !onI)
             {
@@ -1671,6 +1756,13 @@ namespace Contrast.Level
 
             if (player != null)
             {
+                if (player.IsTestModeActive)
+                {
+                    if (GameManager.Instance != null)
+                        GameManager.Instance.SetTestMode(false);
+                    else
+                        player.SetTestMode(false);
+                }
                 player.SetInputEnabled(false);
                 player.StopMovement();
             }
@@ -1820,6 +1912,7 @@ namespace Contrast.Level
 
         public void OnPlayAgainClicked()
         {
+            Debug.Log("[UI_BUTTON][NewtonCompletion] Clicked PLAY AGAINButton -> OnPlayAgainClicked");
             Debug.Log("[NEWTON_FINALE] Play Again clicked.");
             ResetState();
             GameManager.Instance?.Restart();
@@ -1827,6 +1920,7 @@ namespace Contrast.Level
 
         public void OnReturnToLevelSelectClicked()
         {
+            Debug.Log("[UI_BUTTON][NewtonCompletion] Clicked LEVEL SELECTButton -> OnReturnToLevelSelectClicked");
             Debug.Log("[NEWTON_FINALE] Return to Level Select clicked.");
             Teardown();
             GameManager.Instance?.ReturnToMainMenu();

@@ -140,6 +140,7 @@ namespace Contrast.UI
                     fsBtn.onClick.RemoveAllListeners();
                     fsBtn.onClick.AddListener(() =>
                     {
+                        Debug.Log("[UI_BUTTON][MainMenu] Clicked FullscreenButton -> ToggleFullscreen");
                         ContrastAudioManager.Instance?.PlayButtonClick();
                         Screen.fullScreen = !Screen.fullScreen;
                     });
@@ -350,6 +351,7 @@ namespace Contrast.UI
                 new Vector2(-64f, -20f),
                 () =>
                 {
+                    Debug.Log("[UI_BUTTON][MainMenu] Clicked FullscreenButton -> ToggleFullscreen");
                     ContrastAudioManager.Instance?.PlayButtonClick();
                     Screen.fullScreen = !Screen.fullScreen;
                 },

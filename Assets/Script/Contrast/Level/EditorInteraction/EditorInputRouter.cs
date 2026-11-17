@@ -112,7 +112,7 @@ namespace Contrast.Level.EditorInteraction
                 ? Mouse.current.position.ReadValue()
                 : Vector2.zero;
 #else
-            return UnityEngine.Input.mousePosition;
+            try { return UnityEngine.Input.mousePosition; } catch { return Vector2.zero; }
 #endif
         }
 
@@ -124,7 +124,7 @@ namespace Contrast.Level.EditorInteraction
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null ? Mouse.current.scroll.ReadValue().y : 0f;
 #else
-            return UnityEngine.Input.mouseScrollDelta.y;
+            try { return UnityEngine.Input.mouseScrollDelta.y; } catch { return 0f; }
 #endif
         }
 
@@ -158,7 +158,7 @@ namespace Contrast.Level.EditorInteraction
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.leftButton.wasPressedThisFrame;
 #else
-            return UnityEngine.Input.GetMouseButtonDown(0);
+            try { return UnityEngine.Input.GetMouseButtonDown(0); } catch { return false; }
 #endif
         }
 
@@ -167,7 +167,7 @@ namespace Contrast.Level.EditorInteraction
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.leftButton.isPressed;
 #else
-            return UnityEngine.Input.GetMouseButton(0);
+            try { return UnityEngine.Input.GetMouseButton(0); } catch { return false; }
 #endif
         }
 
@@ -176,7 +176,7 @@ namespace Contrast.Level.EditorInteraction
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.leftButton.wasReleasedThisFrame;
 #else
-            return UnityEngine.Input.GetMouseButtonUp(0);
+            try { return UnityEngine.Input.GetMouseButtonUp(0); } catch { return false; }
 #endif
         }
 
@@ -185,7 +185,7 @@ namespace Contrast.Level.EditorInteraction
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.middleButton.wasPressedThisFrame;
 #else
-            return UnityEngine.Input.GetMouseButtonDown(2);
+            try { return UnityEngine.Input.GetMouseButtonDown(2); } catch { return false; }
 #endif
         }
 
@@ -194,7 +194,7 @@ namespace Contrast.Level.EditorInteraction
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.middleButton.isPressed;
 #else
-            return UnityEngine.Input.GetMouseButton(2);
+            try { return UnityEngine.Input.GetMouseButton(2); } catch { return false; }
 #endif
         }
 
@@ -203,7 +203,7 @@ namespace Contrast.Level.EditorInteraction
 #if ENABLE_INPUT_SYSTEM
             return Mouse.current != null && Mouse.current.middleButton.wasReleasedThisFrame;
 #else
-            return UnityEngine.Input.GetMouseButtonUp(2);
+            try { return UnityEngine.Input.GetMouseButtonUp(2); } catch { return false; }
 #endif
         }
 
@@ -221,7 +221,7 @@ namespace Contrast.Level.EditorInteraction
             Keyboard kb = Keyboard.current;
             return kb != null && (kb.deleteKey.wasPressedThisFrame || kb.backspaceKey.wasPressedThisFrame);
 #else
-            return UnityEngine.Input.GetKeyDown(KeyCode.Delete) || UnityEngine.Input.GetKeyDown(KeyCode.Backspace);
+            try { return UnityEngine.Input.GetKeyDown(KeyCode.Delete) || UnityEngine.Input.GetKeyDown(KeyCode.Backspace); } catch { return false; }
 #endif
         }
 
@@ -237,7 +237,7 @@ namespace Contrast.Level.EditorInteraction
             Keyboard kb = Keyboard.current;
             return kb != null && kb.escapeKey.wasPressedThisFrame;
 #else
-            return UnityEngine.Input.GetKeyDown(KeyCode.Escape);
+            try { return UnityEngine.Input.GetKeyDown(KeyCode.Escape); } catch { return false; }
 #endif
         }
 
@@ -253,7 +253,7 @@ namespace Contrast.Level.EditorInteraction
             Keyboard kb = Keyboard.current;
             return kb != null && kb.fKey.wasPressedThisFrame;
 #else
-            return UnityEngine.Input.GetKeyDown(KeyCode.F);
+            try { return UnityEngine.Input.GetKeyDown(KeyCode.F); } catch { return false; }
 #endif
         }
     }

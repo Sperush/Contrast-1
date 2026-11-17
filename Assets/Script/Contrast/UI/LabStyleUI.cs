@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Contrast.UI
@@ -303,9 +304,9 @@ namespace Contrast.UI
                 lbl.horizontalOverflow = HorizontalWrapMode.Overflow;
                 lbl.raycastTarget = false;
 
-                Outline txtShadow = lblGo.AddComponent<Outline>();
-                txtShadow.effectColor = new Color(0.02f, 0.04f, 0.08f, 0.78f);
-                txtShadow.effectDistance = new Vector2(1f, -1f);
+                Shadow txtShadow = lblGo.AddComponent<Shadow>();
+                txtShadow.effectColor = new Color(0.02f, 0.04f, 0.08f, 0.72f);
+                txtShadow.effectDistance = new Vector2(0f, -1.5f);
 
                 RectTransform lRt = lblGo.GetComponent<RectTransform>();
                 lRt.anchorMin = new Vector2(0f, 0f);
@@ -726,6 +727,116 @@ namespace Contrast.UI
         private static float Sign(Vector2 p1, Vector2 p2, Vector2 p3)
         {
             return (p1.x - p3.x) * (p2.y - p3.y) - (p2.x - p3.x) * (p1.y - p3.y);
+        }
+
+        /// <summary>
+        /// Ensures an active EventSystem with a valid, enabled BaseInputModule (StandaloneInputModule
+        /// in Unity 2019) exists in the current scene. Fixes scenes whose EventSystem only had Unity 6's
+        /// InputSystemUIInputModule (which becomes a missing script in Unity 2019).
+        /// </summary>
+        public static EventSystem EnsureEventSystem()
+        {
+            EventSystem es = Contrast.Core.UnityCompat.FindAny<EventSystem>(true);
+            if (es == null)
+            {
+                GameObject go = new GameObject("EventSystem");
+                es = go.AddComponent<EventSystem>();
+            }
+            else
+            {
+                if (!es.gameObject.activeSelf)
+                    es.gameObject.SetActive(true);
+                es.enabled = true;
+            }
+
+            BaseInputModule module = es.GetComponent<BaseInputModule>();
+            if (module == null)
+            {
+#if ENABLE_INPUT_SYSTEM
+                module = es.gameObject.AddComponent<UnityEngine.InputSystem.UI.InputSystemUIInputModule>();
+#else
+                module = es.gameObject.AddComponent<StandaloneInputModule>();
+#endif
+            }
+            if (module != null)
+                module.enabled = true;
+
+            return es;
+        }
+
+        /// <summary>
+        /// Ensures all UnityEngine.UI.Text elements under <paramref name="root"/> render crisply
+        /// at native 1:1 screen-pixel resolution (with pixelPerfect Canvas, clean font assignment,
+        /// unclipped vertical diacritics, and localScale = Vector3.one) without 0.5x downsampling
+        /// aliasing on Unity's non-mipmapped dynamic font texture atlas.
+        /// Also automatically repairs any Text previously serialized with localScale = 0.5.
+        /// </summary>
+        public static void CrispenTextHierarchy(Transform root)
+        {
+            if (root == null)
+                return;
+
+            Canvas enclosingCanvas = root.GetComponentInParent<Canvas>();
+            if (enclosingCanvas != null && enclosingCanvas.renderMode == RenderMode.ScreenSpaceOverlay)
+            {
+                enclosingCanvas.pixelPerfect = true;
+            }
+
+            Font fallbackFont = GetFont();
+            if (fallbackFont != null && fallbackFont.material != null && fallbackFont.material.mainTexture != null)
+            {
+                fallbackFont.material.mainTexture.filterMode = FilterMode.Bilinear;
+            }
+
+            Text[] texts = root.GetComponentsInChildren<Text>(true);
+            for (int i = 0; i < texts.Length; i++)
+            {
+                Text txt = texts[i];
+                if (txt == null)
+                    continue;
+
+                if (txt.font == null)
+                    txt.font = fallbackFont;
+
+                txt.alignByGeometry = false;
+                txt.verticalOverflow = VerticalWrapMode.Overflow;
+                if (txt.GetComponent<Selectable>() == null)
+                    txt.raycastTarget = false;
+
+                RectTransform rt = txt.GetComponent<RectTransform>();
+                if (rt == null)
+                    continue;
+
+                // Repair any Text that was previously baked at localScale = (0.5, 0.5, 1) with 2x bounds/fontSize
+                if (Mathf.Abs(rt.localScale.x - 0.5f) < 0.08f && Mathf.Abs(rt.localScale.y - 0.5f) < 0.08f)
+                {
+                    Vector2 anchorRef = new Vector2(
+                        Mathf.Lerp(rt.anchorMin.x, rt.anchorMax.x, rt.pivot.x),
+                        Mathf.Lerp(rt.anchorMin.y, rt.anchorMax.y, rt.pivot.y));
+                    rt.anchorMin = anchorRef + (rt.anchorMin - anchorRef) * 0.5f;
+                    rt.anchorMax = anchorRef + (rt.anchorMax - anchorRef) * 0.5f;
+                    rt.sizeDelta = rt.sizeDelta * 0.5f;
+                    rt.localScale = Vector3.one;
+
+                    if (txt.fontSize >= 20)
+                        txt.fontSize = Mathf.Max(10, Mathf.RoundToInt(txt.fontSize * 0.5f));
+                }
+
+                if (txt.supportRichText && !string.IsNullOrEmpty(txt.text) && txt.text.Contains("<size=30>"))
+                {
+                    txt.text = txt.text.Replace("<size=30>", "<size=15>");
+                }
+
+                // Prevent heavy 4-way Outline from muddying small Vietnamese diacritics
+                Outline outline = txt.GetComponent<Outline>();
+                if (outline != null && txt.fontSize <= 18)
+                {
+                    Color c = outline.effectColor;
+                    c.a = Mathf.Min(c.a, 0.40f);
+                    outline.effectColor = c;
+                    outline.effectDistance = new Vector2(1f, -1f);
+                }
+            }
         }
     }
 }

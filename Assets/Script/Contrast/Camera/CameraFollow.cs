@@ -59,7 +59,7 @@ namespace Contrast.Camera
 
         [Header("Scale Bounds (Orthographic Size)")]
         [SerializeField] private float minScale = 5.0f;
-        [SerializeField] private float maxScale = 8.6f;
+        [SerializeField] private float maxScale = 9.89f; // 8.6f * 1.15f (Level 2 +15% unified Newton camera size)
 
         [Header("Reversible Transition Smoothing")]
         [SerializeField] private float positionSmoothTime = 0.25f;
@@ -69,9 +69,9 @@ namespace Contrast.Camera
         private float targetOrthoSize = 5.0f;
         private float zoomLerpSpeed = 2.5f;
 
-        // Fixed Newton marking camera parameters (HTML newtonViewLayout parity)
+        // Fixed Newton marking camera parameters (Level 2 +15% unified size = 9.89)
         private Vector3 newtonFixedPosition;
-        private float newtonFixedOrthoSize = 8.6f;
+        private float newtonFixedOrthoSize = 9.89f;
         private float newtonFixedLerpSpeed = 3.2f;
 
         // Coordinate-driven bidirectional Newton transition state
@@ -90,7 +90,7 @@ namespace Contrast.Camera
 
         // Reveal parameters (for NewtonResultReveal)
         private Vector3 revealPosition;
-        private float revealOrthoSize = 9.6f;
+        private float revealOrthoSize = 9.89f;
         private float revealLerpSpeed = 3.2f;
 
         // Bounded frame-by-frame transition trace (Task G)
@@ -323,7 +323,7 @@ namespace Contrast.Camera
         /// Locks the camera to an HTML-derived fixed world-space Newton framing.
         /// Preserved for direct endpoint setup and backward compatibility.
         /// </summary>
-        public void SetNewtonFixed(Vector3 fixedWorldPosition, float orthoSize = 9.4f, float lerpSpeed = 3.2f)
+        public void SetNewtonFixed(Vector3 fixedWorldPosition, float orthoSize = 9.89f, float lerpSpeed = 3.2f)
         {
             if (cam == null) cam = GetComponent<UnityEngine.Camera>();
             currentMode = CameraMode.NewtonFixed;
@@ -353,7 +353,7 @@ namespace Contrast.Camera
             zoomLerpSpeed = lerpSpeed;
         }
 
-        public void SetNewtonReveal(Vector3 centerPosition, float targetSize = 9.6f, float lerpSpeed = 3.2f)
+        public void SetNewtonReveal(Vector3 centerPosition, float targetSize = 9.89f, float lerpSpeed = 3.2f)
         {
             currentMode = CameraMode.NewtonResultReveal;
             targetCameraMode = CameraMode.NewtonResultReveal;
@@ -413,7 +413,12 @@ namespace Contrast.Camera
             else
             {
                 if (currentMode == CameraMode.TestModeFreeMove)
-                    currentMode = previousMode;
+                {
+                    if (hasNewtonThreshold && target != null && target.position.x > PlatformLeftBoundaryX)
+                        currentMode = CameraMode.NewtonFixed;
+                    else
+                        currentMode = previousMode;
+                }
             }
         }
 
@@ -479,7 +484,9 @@ namespace Contrast.Camera
                     transform.position = new Vector3(target.position.x, target.position.y, transform.position.z);
                     if (cam != null && cam.orthographic)
                     {
-                        cam.orthographicSize = minScale;
+                        cam.orthographicSize = (hasNewtonThreshold && target.position.x > PlatformLeftBoundaryX)
+                            ? maxScale
+                            : minScale;
                     }
                 }
                 return;

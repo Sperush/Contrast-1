@@ -42,10 +42,14 @@ namespace Contrast.Build
             if (EditorApplication.isPlayingOrWillChangePlaymode)
                 return;
 
-            // 1. Open MainMenuScene and ensure full MainMenuUI Canvas hierarchy is saved in the scene
+            // 1. Open MainMenuScene (if not already loaded) and ensure full MainMenuUI Canvas hierarchy is saved in the scene
             if (File.Exists(MainMenuScenePath))
             {
-                Scene menuScene = EditorSceneManager.OpenScene(MainMenuScenePath, OpenSceneMode.Single);
+                Scene menuScene = SceneManager.GetSceneByPath(MainMenuScenePath);
+                if (!menuScene.IsValid() || !menuScene.isLoaded)
+                {
+                    menuScene = EditorSceneManager.OpenScene(MainMenuScenePath, OpenSceneMode.Single);
+                }
                 SceneManager.SetActiveScene(menuScene);
 
                 var menuUI = FindComponentInScene<Contrast.UI.MainMenuUI>(menuScene);
@@ -57,23 +61,29 @@ namespace Contrast.Build
                 }
 
                 bool neededBake = menuUI.transform.Find("Canvas/Panel") == null;
+                bool cleanedMenu = CleanSceneMissingScriptsAndEventSystem(menuScene, true);
                 menuUI.RebuildMenuUIInScene();
-                if (neededBake)
+                if (neededBake || cleanedMenu)
                 {
                     EditorSceneManager.MarkSceneDirty(menuScene);
                     EditorSceneManager.SaveScene(menuScene);
                 }
             }
 
-            // 2. Open GameplayScene additively so BOTH MainMenuScene and GameplayScene appear in Hierarchy
+            // 2. Open GameplayScene additively (if not already loaded) so BOTH MainMenuScene and GameplayScene appear in Hierarchy
             if (File.Exists(GameplayScenePath))
             {
-                Scene gameplayScene = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Additive);
+                Scene gameplayScene = SceneManager.GetSceneByPath(GameplayScenePath);
+                if (!gameplayScene.IsValid() || !gameplayScene.isLoaded)
+                {
+                    gameplayScene = EditorSceneManager.OpenScene(GameplayScenePath, OpenSceneMode.Additive);
+                }
                 Scene prevActive = SceneManager.GetActiveScene();
                 SceneManager.SetActiveScene(gameplayScene);
 
+                bool cleanedGameplay = CleanSceneMissingScriptsAndEventSystem(gameplayScene, false);
                 bool dirtyGameplay = EnsureGameplaySceneObjectsBaked(gameplayScene);
-                if (dirtyGameplay)
+                if (dirtyGameplay || cleanedGameplay)
                 {
                     EditorSceneManager.MarkSceneDirty(gameplayScene);
                     EditorSceneManager.SaveScene(gameplayScene);
@@ -84,13 +94,57 @@ namespace Contrast.Build
             }
         }
 
+        private static bool CleanSceneMissingScriptsAndEventSystem(Scene scene, bool ensureEventSystem)
+        {
+            if (!scene.IsValid() || !scene.isLoaded)
+                return false;
+
+            bool changed = false;
+            GameObject[] roots = scene.GetRootGameObjects();
+            for (int i = roots.Length - 1; i >= 0; i--)
+            {
+                GameObject root = roots[i];
+                if (root == null)
+                    continue;
+
+                if (root.name == "Global Light 2D")
+                {
+                    UnityEngine.Object.DestroyImmediate(root);
+                    changed = true;
+                    continue;
+                }
+
+                Transform[] allTr = root.GetComponentsInChildren<Transform>(true);
+                for (int t = 0; t < allTr.Length; t++)
+                {
+                    if (allTr[t] == null)
+                        continue;
+                    int removed = GameObjectUtility.RemoveMonoBehavioursWithMissingScript(allTr[t].gameObject);
+                    if (removed > 0)
+                        changed = true;
+                }
+            }
+
+            if (ensureEventSystem)
+            {
+                var es = FindComponentInScene<UnityEngine.EventSystems.EventSystem>(scene);
+                if (es != null && es.GetComponent<UnityEngine.EventSystems.BaseInputModule>() == null)
+                {
+                    Contrast.UI.LabStyleUI.EnsureEventSystem();
+                    changed = true;
+                }
+            }
+
+            return changed;
+        }
+
         private static bool EnsureGameplaySceneObjectsBaked(Scene gameplayScene)
         {
             bool changed = false;
             var gm = FindComponentInScene<Contrast.Core.GameManager>(gameplayScene);
             var loader = FindComponentInScene<Contrast.Level.LevelLoader>(gameplayScene);
 
-            var ctrlUI = FindComponentInScene<Contrast.UI.GameControlUI>(gameplayScene);
+            var ctrlUI = FindAndDeduplicateInScene<Contrast.UI.GameControlUI>(gameplayScene, ref changed);
             if (ctrlUI == null)
             {
                 GameObject go = new GameObject("GameControlUI");
@@ -103,7 +157,7 @@ namespace Contrast.Build
             ctrlUI.EnsureInitialized();
             ctrlUI.Show(false);
 
-            var inGameMenu = FindComponentInScene<Contrast.UI.InGameMenuUI>(gameplayScene);
+            var inGameMenu = FindAndDeduplicateInScene<Contrast.UI.InGameMenuUI>(gameplayScene, ref changed);
             if (inGameMenu == null)
             {
                 GameObject go = new GameObject("InGameMenuUI");
@@ -116,7 +170,7 @@ namespace Contrast.Build
             inGameMenu.EnsureInitialized();
             inGameMenu.Show(false);
 
-            var gameOver = FindComponentInScene<Contrast.UI.GameOverUI>(gameplayScene);
+            var gameOver = FindAndDeduplicateInScene<Contrast.UI.GameOverUI>(gameplayScene, ref changed);
             if (gameOver == null)
             {
                 GameObject go = new GameObject("GameOverUI");
@@ -129,7 +183,7 @@ namespace Contrast.Build
             gameOver.EnsureInitialized();
             gameOver.Show(false);
 
-            var loadingUI = FindComponentInScene<Contrast.UI.LoadingOverlayUI>(gameplayScene);
+            var loadingUI = FindAndDeduplicateInScene<Contrast.UI.LoadingOverlayUI>(gameplayScene, ref changed);
             if (loadingUI == null)
             {
                 GameObject go = new GameObject("LoadingOverlayUI");
@@ -142,7 +196,7 @@ namespace Contrast.Build
             loadingUI.EnsureInitialized();
             loadingUI.Show(false);
 
-            var phaseTuner = FindComponentInScene<Contrast.Presentation.PhaseTunerUI>(gameplayScene);
+            var phaseTuner = FindAndDeduplicateInScene<Contrast.Presentation.PhaseTunerUI>(gameplayScene, ref changed);
             if (phaseTuner == null)
             {
                 GameObject go = new GameObject("PhaseTunerUI");
@@ -199,11 +253,48 @@ namespace Contrast.Build
         private static void SetRefIfNull(SerializedObject so, string propName, UnityEngine.Object target, ref bool changed)
         {
             SerializedProperty prop = so.FindProperty(propName);
-            if (prop != null && prop.objectReferenceValue == null && target != null)
+            if (prop != null && target != null && prop.objectReferenceValue != target)
             {
                 prop.objectReferenceValue = target;
                 changed = true;
             }
+        }
+
+        private static T FindAndDeduplicateInScene<T>(Scene scene, ref bool changed) where T : Component
+        {
+            if (!scene.IsValid() || !scene.isLoaded)
+                return null;
+            T primary = null;
+            string expectedName = typeof(T).Name;
+            GameObject[] roots = scene.GetRootGameObjects();
+            for (int i = roots.Length - 1; i >= 0; i--)
+            {
+                GameObject root = roots[i];
+                if (root == null)
+                    continue;
+
+                T[] matches = root.GetComponentsInChildren<T>(true);
+                if (matches.Length == 0 && root.name == expectedName)
+                {
+                    UnityEngine.Object.DestroyImmediate(root);
+                    changed = true;
+                    continue;
+                }
+
+                for (int m = 0; m < matches.Length; m++)
+                {
+                    if (primary == null)
+                    {
+                        primary = matches[m];
+                    }
+                    else if (matches[m] != null && matches[m].gameObject != primary.gameObject)
+                    {
+                        UnityEngine.Object.DestroyImmediate(matches[m].gameObject);
+                        changed = true;
+                    }
+                }
+            }
+            return primary;
         }
 
         private static T FindComponentInScene<T>(Scene scene) where T : Component
@@ -291,16 +382,29 @@ namespace Contrast.Build
                 else if (hasMenuLoaded)
                 {
                     Scene menuScene = SceneManager.GetSceneByPath(MainMenuScenePath);
+                    SceneManager.SetActiveScene(menuScene);
+                    bool cleanedMenu = CleanSceneMissingScriptsAndEventSystem(menuScene, true);
                     var menuUI = FindComponentInScene<Contrast.UI.MainMenuUI>(menuScene);
                     if (menuUI != null)
                     {
                         // Refresh bindings & upgrade interference labels in-place without overwriting user's scene edits
                         menuUI.RebuildMenuUIInScene();
                     }
+                    if (cleanedMenu)
+                    {
+                        EditorSceneManager.MarkSceneDirty(menuScene);
+                        EditorSceneManager.SaveScene(menuScene);
+                    }
                     if (hasGameplayLoaded)
                     {
                         Scene gpScene = SceneManager.GetSceneByPath(GameplayScenePath);
-                        EnsureGameplaySceneObjectsBaked(gpScene);
+                        bool cleanedGp = CleanSceneMissingScriptsAndEventSystem(gpScene, false);
+                        bool dirtyGp = EnsureGameplaySceneObjectsBaked(gpScene);
+                        if (cleanedGp || dirtyGp)
+                        {
+                            EditorSceneManager.MarkSceneDirty(gpScene);
+                            EditorSceneManager.SaveScene(gpScene);
+                        }
                     }
                 }
             };
@@ -310,9 +414,20 @@ namespace Contrast.Build
         {
             if (state == PlayModeStateChange.ExitingEditMode)
             {
+                for (int i = 0; i < SceneManager.sceneCount; i++)
+                {
+                    Scene s = SceneManager.GetSceneAt(i);
+                    if (s.isLoaded)
+                        CleanSceneMissingScriptsAndEventSystem(s, s.path == MainMenuScenePath);
+                }
                 EditorSceneManager.SaveOpenScenes();
                 if (SceneManager.sceneCount > 1)
                 {
+                    Scene menuScene = SceneManager.GetSceneByPath(MainMenuScenePath);
+                    if (menuScene.IsValid() && menuScene.isLoaded)
+                    {
+                        SceneManager.SetActiveScene(menuScene);
+                    }
                     Scene active = SceneManager.GetActiveScene();
                     for (int i = SceneManager.sceneCount - 1; i >= 0; i--)
                     {
@@ -830,13 +945,29 @@ namespace Contrast.Build
 
             try
             {
-                System.IO.Compression.ZipFile.CreateFromDirectory(sourceDir, zipPath, System.IO.Compression.CompressionLevel.Optimal, false);
+                using (FileStream zipStream = new FileStream(zipPath, FileMode.CreateNew, FileAccess.Write))
+                using (var archive = new System.IO.Compression.ZipArchive(zipStream, System.IO.Compression.ZipArchiveMode.Create))
+                {
+                    string fullSourceDir = Path.GetFullPath(sourceDir).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                    string[] allFiles = Directory.GetFiles(fullSourceDir, "*", SearchOption.AllDirectories);
+                    for (int i = 0; i < allFiles.Length; i++)
+                    {
+                        string filePath = allFiles[i];
+                        string relPath = filePath.Substring(fullSourceDir.Length + 1).Replace('\\', '/');
+                        var entry = archive.CreateEntry(relPath, System.IO.Compression.CompressionLevel.Optimal);
+                        using (Stream entryStream = entry.Open())
+                        using (FileStream fileStream = File.OpenRead(filePath))
+                        {
+                            fileStream.CopyTo(entryStream);
+                        }
+                    }
+                }
                 long zipSize = new FileInfo(zipPath).Length;
                 Debug.Log($"[BUILD_PIPELINE] Successfully packaged portable ZIP: {zipPath} ({zipSize / (1024 * 1024.0):F2} MB)");
             }
             catch (Exception ex)
             {
-                Debug.LogError($"[BUILD_PIPELINE] Failed to create ZIP via ZipFile: {ex.Message}");
+                Debug.LogError($"[BUILD_PIPELINE] Failed to create ZIP via ZipArchive: {ex.Message}");
             }
         }
 

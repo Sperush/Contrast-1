@@ -39,9 +39,9 @@ namespace Contrast.UI
                 LabStyleUI.ApplySlicedSprite(cardBg, LabStyleUI.GetCardSprite(), false);
 
             BindButton(existing, "PlayFromStartButton", LabStyleUI.GetPrimaryButtonSprite(), LabStyleUI.IconKind.PlayTriangle, onPlayFromStart);
-            BindLevelButton(existing, "SelectLevel_L01", () => onSelectDirectLevel(0));
-            BindLevelButton(existing, "SelectLevel_L02", () => onSelectDirectLevel(1));
-            BindLevelButton(existing, "SelectLevel_L03", () => onSelectDirectLevel(2));
+            BindLevelButton(existing, "SelectLevel_L01", "Vật cản pha tĩnh  ·  2 Quang điểm  ·  k = 5,  i = 3", () => onSelectDirectLevel(0));
+            BindLevelButton(existing, "SelectLevel_L02", "Cầu thang lệch pha  ·  2 Quang điểm  ·  k = 4,  i = 2", () => onSelectDirectLevel(1));
+            BindLevelButton(existing, "SelectLevel_L03", "Giếng ba tầng & bệ động  ·  3 Quang điểm  ·  k = 5,  i = 2", () => onSelectDirectLevel(2));
             BindButton(existing, "SettingsButton", LabStyleUI.GetPillSprite(), LabStyleUI.IconKind.SettingsSliders, onOpenSettings);
             BindButton(existing, "ExitButton", LabStyleUI.GetDangerButtonSprite(), LabStyleUI.IconKind.PowerExit, onQuitApplication);
 
@@ -54,7 +54,10 @@ namespace Contrast.UI
             if (tr == null) return;
             Image img = tr.GetComponent<Image>();
             if (img != null)
+            {
                 LabStyleUI.ApplySlicedSprite(img, bgSprite, false);
+                img.raycastTarget = true;
+            }
             Transform iconTr = tr.Find("Icon");
             if (iconTr != null)
             {
@@ -62,21 +65,40 @@ namespace Contrast.UI
                 if (icImg != null)
                     icImg.sprite = LabStyleUI.GetIconSprite(iconKind);
             }
-            Button btn = tr.GetComponent<Button>();
-            if (btn != null)
+            Graphic[] childGraphics = tr.GetComponentsInChildren<Graphic>(true);
+            for (int i = 0; i < childGraphics.Length; i++)
             {
-                btn.onClick.RemoveAllListeners();
-                btn.onClick.AddListener(onClick);
+                if (childGraphics[i] != null && childGraphics[i].transform != tr)
+                    childGraphics[i].raycastTarget = false;
             }
+            Button btn = tr.GetComponent<Button>();
+            if (btn == null)
+                btn = tr.gameObject.AddComponent<Button>();
+            btn.enabled = true;
+            btn.interactable = true;
+            if (img != null)
+                btn.targetGraphic = img;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(onClick);
         }
 
-        private static void BindLevelButton(Transform parent, string name, UnityAction onClick)
+        private static void BindLevelButton(Transform parent, string name, string updatedSubText, UnityAction onClick)
         {
             Transform tr = parent.Find(name);
             if (tr == null) return;
+            Transform subTr = tr.Find("Sub");
+            if (subTr != null && !string.IsNullOrEmpty(updatedSubText))
+            {
+                Text subTxt = subTr.GetComponent<Text>();
+                if (subTxt != null)
+                    subTxt.text = updatedSubText;
+            }
             Image img = tr.GetComponent<Image>();
             if (img != null)
+            {
                 LabStyleUI.ApplySlicedSprite(img, LabStyleUI.GetSecondaryButtonSprite(), false);
+                img.raycastTarget = true;
+            }
             Transform orderCircle = tr.Find("OrderCircle");
             if (orderCircle != null)
             {
@@ -98,12 +120,21 @@ namespace Contrast.UI
                         dImg.sprite = LabStyleUI.GetSoftCircleSprite();
                 }
             }
-            Button btn = tr.GetComponent<Button>();
-            if (btn != null)
+            Graphic[] childGraphics = tr.GetComponentsInChildren<Graphic>(true);
+            for (int i = 0; i < childGraphics.Length; i++)
             {
-                btn.onClick.RemoveAllListeners();
-                btn.onClick.AddListener(onClick);
+                if (childGraphics[i] != null && childGraphics[i].transform != tr)
+                    childGraphics[i].raycastTarget = false;
             }
+            Button btn = tr.GetComponent<Button>();
+            if (btn == null)
+                btn = tr.gameObject.AddComponent<Button>();
+            btn.enabled = true;
+            btn.interactable = true;
+            if (img != null)
+                btn.targetGraphic = img;
+            btn.onClick.RemoveAllListeners();
+            btn.onClick.AddListener(onClick);
         }
 
         public void Build(
@@ -156,7 +187,7 @@ namespace Contrast.UI
                 "SelectLevel_L01",
                 "1",
                 "Bài 01  ·  Cánh cửa không phải vật cản",
-                "Vật cản pha tĩnh  ·  2 Quang điểm  ·  k = 6,  i = 3",
+                "Vật cản pha tĩnh  ·  2 Quang điểm  ·  k = 5,  i = 3",
                 "550 nm · Lục",
                 new Color(0.28f, 0.92f, 0.52f, 1f),
                 new Vector2(0f, 104f),
@@ -180,7 +211,7 @@ namespace Contrast.UI
                 "SelectLevel_L03",
                 "3",
                 "Bài 03  ·  Giếng ba tầng",
-                "Giếng ba tầng & bệ động  ·  3 Quang điểm  ·  k = 7,  i = 2",
+                "Giếng ba tầng & bệ động  ·  3 Quang điểm  ·  k = 5,  i = 2",
                 "470 nm · Lam",
                 new Color(0.38f, 0.68f, 1f, 1f),
                 new Vector2(0f, -84f),

@@ -459,7 +459,7 @@ namespace Contrast.Level
         /// </summary>
         public void ProcessPlayerInteractions(PlayerController player)
         {
-            if (player == null || player.IsTestModeActive)
+            if (player == null)
                 return;
 
             Aabb playerBounds = Aabb.FromCenter(
