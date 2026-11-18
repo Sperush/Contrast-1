@@ -70,21 +70,14 @@ namespace Contrast.Core
             Font font = null;
             try
             {
+#if UNITY_2022_2_OR_NEWER
                 font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+#else
+                font = Resources.GetBuiltinResource<Font>("Arial.ttf");
+#endif
             }
             catch
             {
-            }
-
-            if (font == null)
-            {
-                try
-                {
-                    font = Resources.GetBuiltinResource<Font>("Arial.ttf");
-                }
-                catch
-                {
-                }
             }
 
             if (font == null)

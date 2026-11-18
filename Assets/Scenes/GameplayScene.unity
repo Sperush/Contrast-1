@@ -3882,20 +3882,6 @@ MonoBehaviour:
   m_OnClick:
     m_PersistentCalls:
       m_Calls: []
---- !u!115 &635452957
-MonoScript:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  serializedVersion: 5
-  m_Script: 
-  m_DefaultReferences: {}
-  m_Icon: {fileID: 0}
-  m_ExecutionOrder: 0
-  m_ClassName: GameOverUI
-  m_Namespace: Contrast.UI
 --- !u!1 &642575957
 GameObject:
   m_ObjectHideFlags: 0
@@ -5384,34 +5370,6 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 969994267}
   m_CullTransparentMesh: 1
---- !u!115 &970135644
-MonoScript:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  serializedVersion: 5
-  m_Script: 
-  m_DefaultReferences: {}
-  m_Icon: {fileID: 0}
-  m_ExecutionOrder: 0
-  m_ClassName: GameOverUI
-  m_Namespace: Contrast.UI
---- !u!115 &994262998
-MonoScript:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: 
-  serializedVersion: 5
-  m_Script: 
-  m_DefaultReferences: {}
-  m_Icon: {fileID: 0}
-  m_ExecutionOrder: 0
-  m_ClassName: GameOverUI
-  m_Namespace: Contrast.UI
 --- !u!1 &1003125411
 GameObject:
   m_ObjectHideFlags: 0
@@ -7036,7 +6994,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 1343723701}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 994262998}
+  m_Script: {fileID: 11500000, guid: 81c9a060c5c4362408432f74f20d958c, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
 --- !u!4 &1343723703
