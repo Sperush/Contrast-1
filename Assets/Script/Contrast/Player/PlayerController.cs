@@ -177,6 +177,10 @@ namespace Contrast.Player
             }
         }
 
+        // In Legacy Input Manager (InputManager.asset sensitivity = 0.1, internal Windows scale = 0.5),
+        // GetAxisRaw("Mouse X/Y") returns 0.05 per raw mouse pixel count (1/20 of InputSystem Mouse.current.delta).
+        private const float LegacyMouseAxisToPixelScale = 20f;
+
         public static Vector2 ReadMouseDelta()
         {
             if (CustomMouseDeltaReader != null)
@@ -187,7 +191,9 @@ namespace Contrast.Player
                 return UnityEngine.InputSystem.Mouse.current.delta.ReadValue();
             return Vector2.zero;
 #else
-            return new Vector2(UnityEngine.Input.GetAxisRaw("Mouse X"), UnityEngine.Input.GetAxisRaw("Mouse Y"));
+            return new Vector2(
+                UnityEngine.Input.GetAxisRaw("Mouse X") * LegacyMouseAxisToPixelScale,
+                UnityEngine.Input.GetAxisRaw("Mouse Y") * LegacyMouseAxisToPixelScale);
 #endif
         }
 
