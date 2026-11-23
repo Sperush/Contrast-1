@@ -32,7 +32,7 @@ MonoBehaviour:
   maxPendingQueue: 512
   maxRecentPayloads: 100
   omitZeroOptionalFields: 1
-  sendDeviceMetadataOnlyOnSessionStart: 0
+  sendDeviceMetadataOnlyOnSessionStart: 1
   aggregateHighFrequencyTracks: 0
   sendDelaySeconds: 0.05
   stuckCooldownSec: 2
