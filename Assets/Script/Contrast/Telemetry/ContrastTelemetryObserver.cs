@@ -36,6 +36,7 @@ namespace Contrast.Telemetry
         }
 
         private string userId;
+        private string userName;
         private string sessionId;
         private long sessionStartUnixMs;
         private float lastForegroundMarkRealtime;
@@ -66,6 +67,7 @@ namespace Contrast.Telemetry
         private int totalCollectibles;
         private float activeKillY = -50f;
         private float pauseStartRealtime;
+        private string pendingRetryLevelId;
 
         // Death / Stuck deduplication
         private int lastDeathFrame = -1;
@@ -78,6 +80,7 @@ namespace Contrast.Telemetry
         private NewtonFinaleStep prevNewtonStep = NewtonFinaleStep.CaptureK;
 
         public string UserId => userId;
+        public string UserName => userName;
         public string SessionId => sessionId;
         public IReadOnlyList<string> RecentPayloads => recentPayloads;
 
@@ -124,6 +127,25 @@ namespace Contrast.Telemetry
             PlayerPrefs.Save();
         }
 
+        public void SetUserName(string newUserName)
+        {
+            if (string.IsNullOrEmpty(newUserName))
+                return;
+
+            userName = newUserName.Trim();
+            string prefKey = !string.IsNullOrEmpty(Settings.playerPrefsUserNameKey)
+                ? Settings.playerPrefsUserNameKey
+                : "Contrast_Telemetry_UserName";
+            PlayerPrefs.SetString(prefKey, userName);
+            PlayerPrefs.Save();
+        }
+
+        public void SetUserProfile(string newUserId, string newUserName)
+        {
+            SetUserId(newUserId);
+            SetUserName(newUserName);
+        }
+
         private void Awake()
         {
             if (Instance != null && Instance != this)
@@ -143,7 +165,7 @@ namespace Contrast.Telemetry
             Application.logMessageReceived += ObserveRuntimeLog;
             QuangDiemItem.OnCollected += HandleCollectibleCollected;
 
-            EmitSessionTrack("start", includeDeviceMetadata: true, ended: false);
+            EmitSessionTrack("start", ended: false);
         }
 
         private void OnDestroy()
@@ -161,13 +183,13 @@ namespace Contrast.Telemetry
             {
                 activeSessionDurationSec += Mathf.Max(0f, Time.realtimeSinceStartup - lastForegroundMarkRealtime);
                 isAppPaused = true;
-                EmitSessionTrack("pause", includeDeviceMetadata: false, ended: false);
+                EmitSessionTrack("pause", ended: false);
             }
             else if (!paused && isAppPaused)
             {
                 lastForegroundMarkRealtime = Time.realtimeSinceStartup;
                 isAppPaused = false;
-                EmitSessionTrack("resume", includeDeviceMetadata: false, ended: false);
+                EmitSessionTrack("resume", ended: false);
             }
         }
 
@@ -188,7 +210,7 @@ namespace Contrast.Telemetry
                 levelClosed = true;
             }
 
-            EmitSessionTrack("end", includeDeviceMetadata: false, ended: true);
+            EmitSessionTrack("end", ended: true);
             FlushPendingOnQuit();
         }
 
@@ -200,8 +222,11 @@ namespace Contrast.Telemetry
                 if (hasActiveLevel && !levelClosed)
                 {
                     OnGameStateChanged(prevGameState, GameState.MainMenu);
-                    prevGameState = GameState.MainMenu;
                 }
+                prevGameState = GameState.MainMenu;
+                observedLevelData = null;
+                hasActiveLevel = false;
+                pendingRetryLevelId = null;
                 return;
             }
 
@@ -347,7 +372,10 @@ namespace Contrast.Telemetry
             prevNewtonMarkSeq = 0;
             prevNewtonStep = NewtonFinaleStep.CaptureK;
 
-            EmitLevelTrack("start", null, null);
+            bool isRetry = !string.IsNullOrEmpty(pendingRetryLevelId) &&
+                           string.Equals(pendingRetryLevelId, activeLevelId, StringComparison.Ordinal);
+            pendingRetryLevelId = null;
+            EmitLevelTrack(isRetry ? "retry" : "start", null, null);
 
             activeSegmentId = ContrastSpecMapping.ResolveActiveSegmentId(activeLevelId, 0, false);
             BeginSegmentChallenge(activeSegmentId, isRespawnAttempt: false);
@@ -400,13 +428,14 @@ namespace Contrast.Telemetry
             }
             else if (message.StartsWith("[FLOW][RESTART]", StringComparison.Ordinal))
             {
+                pendingRetryLevelId = activeLevelId;
+                observedLevelData = null; // Force fresh level_track retry & attempt_id++ on reload
                 if (hasActiveLevel && !levelClosed)
                 {
                     FlushActiveMovement(GameManager.Instance != null ? GameManager.Instance.Player : null);
                     CloseActiveChallenge("fail");
-                    EmitLevelTrack("retry", "quit_level", "retry");
+                    EmitLevelTrack("end", "quit_level", "retry");
                     levelClosed = true;
-                    observedLevelData = null; // Force fresh level_track start & attempt_id++ on reload
                 }
             }
             else if (message.StartsWith("[CHECKPOINT] reached", StringComparison.Ordinal))
@@ -442,9 +471,10 @@ namespace Contrast.Telemetry
             FlushActiveMovement(pc);
 
             Vector2 pos = pc != null ? (Vector2)pc.transform.position : metrics.LastPos;
+            bool wasStuck = (pc != null && pc.State == PlayerState.Stuck) || metrics.WasStuckRecently;
             string cause = pos.y <= activeKillY + 0.5f
                 ? "fall"
-                : (pc != null && pc.State == PlayerState.Stuck ? "crush" : "other");
+                : (wasStuck ? "crush" : "other");
 
             bool hadOpenJump = metrics.RecordDeath(out _);
 
@@ -460,12 +490,13 @@ namespace Contrast.Telemetry
                     0);
             }
 
-            if (!string.IsNullOrEmpty(metrics.ActiveObstacleId))
+            string activeObstacleId = metrics.ActiveObstacleId;
+            if (!string.IsNullOrEmpty(activeObstacleId))
             {
                 string failReason = cause == "fall" ? "fall" : (cause == "crush" ? "blocked" : "unknown");
-                int obsAttempt = metrics.ObstacleAttemptCounts.TryGetValue(metrics.ActiveObstacleId, out int c) ? c : 1;
+                int obsAttempt = metrics.ObstacleAttemptCounts.TryGetValue(activeObstacleId, out int c) ? c : 1;
                 EmitObstacleTrack(
-                    metrics.ActiveObstacleId,
+                    activeObstacleId,
                     metrics.ActiveObstacleType ?? "other",
                     "obstacle_fail",
                     obsAttempt,
@@ -473,10 +504,11 @@ namespace Contrast.Telemetry
                     failReason,
                     pos.x,
                     pos.y);
-                metrics.ActiveObstacleId = null;
             }
 
-            EmitPlayerDeath(cause, pos);
+            EmitPlayerDeath(cause, pos, activeObstacleId);
+            metrics.ActiveObstacleId = null;
+            metrics.ActiveObstacleType = null;
             CloseActiveChallenge("fail");
             metrics.ResetSpawnTracking();
         }
@@ -705,30 +737,48 @@ namespace Contrast.Telemetry
         // Spec Event Emitters (FormLog Platformer + Mapping Checkpoint)
         // ──────────────────────────────────────────────────────────────
 
-        private void EmitSessionTrack(string actionName, bool includeDeviceMetadata, bool ended)
+        private void EmitSessionTrack(string actionName, bool ended)
         {
+            TelemetrySettings s = Settings;
             long nowMs = NowUnixMs();
-            Send(NewEvent("session_track", includeDeviceMetadata)
-                .Set("action_name", actionName)
-                .Set("start_time", sessionStartUnixMs)
-                .Set("end_time", ended ? (long?)nowMs : null)
-                .Set("duration", activeSessionDurationSec));
+            bool includeDeviceMeta = actionName == "start" || !s.sendDeviceMetadataOnlyOnSessionStart;
+
+            TelemetryEvent evt = NewEvent("session_track")
+                .Set("action_name", actionName);
+
+            if (includeDeviceMeta)
+            {
+                evt.Set("user_id", ResolveEffectiveUserId(s))
+                   .Set("user_name", ResolveEffectiveUserName(s))
+                   .Set("game_version", !string.IsNullOrEmpty(Application.version) ? Application.version : "1.0.0")
+                   .Set("build_id", s.buildId ?? "build_01")
+                   .Set("platform", ResolvePlatformName())
+                   .Set("device_model", SystemInfo.deviceModel ?? string.Empty)
+                   .Set("os_version", SystemInfo.operatingSystem ?? string.Empty)
+                   .Set("country", s.country ?? "VN");
+            }
+
+            evt.Set("start_time", sessionStartUnixMs)
+               .Set("end_time", ended ? (long?)nowMs : null)
+               .Set("duration", activeSessionDurationSec);
+
+            Send(evt);
         }
 
         private void EmitLevelTrack(string actionName, string actionType, string finishReason)
         {
-            bool isStart = actionName == "start";
+            bool isStartOrRetry = actionName == "start" || actionName == "retry";
             long nowMs = NowUnixMs();
             float maxProgress = actionType == "win" ? 1f : metrics.MaxProgress01;
 
-            TelemetryEvent evt = NewEvent("level_track", includeDeviceMetadata: false)
+            TelemetryEvent evt = NewEvent("level_track")
                 .Set("attempt_id", currentAttempt)
                 .Set("level_id", activeLevelId)
                 .Set("level_version", Settings.levelVersion ?? "1.0")
                 .Set("action_name", actionName)
                 .Set("action_type", actionType)
                 .Set("start_time", metrics.LevelStartUnixMs)
-                .Set("end_time", isStart ? (long?)null : nowMs)
+                .Set("end_time", isStartOrRetry ? (long?)null : nowMs)
                 .Set("duration", metrics.LevelElapsedSec)
                 .Set("death_count", metrics.DeathCount)
                 .Set("respawn_count", metrics.RespawnCount)
@@ -737,11 +787,10 @@ namespace Contrast.Telemetry
                 .Set("max_progress", maxProgress)
                 .Set("finish_reason", finishReason);
 
-            if (!isStart && Settings.aggregateHighFrequencyTracks)
+            if (!isStartOrRetry && Settings.aggregateHighFrequencyTracks)
             {
                 evt.Set("total_jump", metrics.TotalJumps)
-                   .Set("total_obstacle_pass", metrics.TotalObstaclesPassed)
-                   .SetOptional("test_mode", metrics.UsedTestMode);
+                   .Set("total_obstacle_pass", metrics.TotalObstaclesPassed);
             }
 
             Send(evt);
@@ -754,7 +803,7 @@ namespace Contrast.Telemetry
             float progressPercent,
             float timeFromPreviousCp)
         {
-            Send(NewEvent("checkpoint_track", includeDeviceMetadata: false)
+            Send(NewEvent("checkpoint_track")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("checkpoint_id", cpId)
@@ -767,7 +816,7 @@ namespace Contrast.Telemetry
 
         private void EmitMovementTrack(string actionName, string direction, float moveDuration, float worldX)
         {
-            TelemetryEvent evt = NewEvent("movement_track", includeDeviceMetadata: false)
+            TelemetryEvent evt = NewEvent("movement_track")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("segment_id", activeSegmentId)
@@ -790,7 +839,7 @@ namespace Contrast.Telemetry
             float horizontalDist,
             int? isSuccess)
         {
-            Send(NewEvent("jump_track", includeDeviceMetadata: false)
+            Send(NewEvent("jump_track")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("segment_id", activeSegmentId)
@@ -815,7 +864,7 @@ namespace Contrast.Telemetry
             float worldX,
             float worldY)
         {
-            Send(NewEvent("obstacle_track", includeDeviceMetadata: false)
+            Send(NewEvent("obstacle_track")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("segment_id", activeSegmentId)
@@ -834,7 +883,7 @@ namespace Contrast.Telemetry
             if (string.IsNullOrEmpty(metrics.ActiveChallengeId))
                 return;
 
-            Send(NewEvent("challenge_track", includeDeviceMetadata: false)
+            Send(NewEvent("challenge_track")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("challenge_id", metrics.ActiveChallengeId)
@@ -847,14 +896,14 @@ namespace Contrast.Telemetry
                 .Set("death_count", metrics.ActiveChallengeDeaths));
         }
 
-        private void EmitPlayerDeath(string cause, Vector2 pos)
+        private void EmitPlayerDeath(string cause, Vector2 pos, string obstacleId)
         {
-            Send(NewEvent("player_death", includeDeviceMetadata: false)
+            Send(NewEvent("player_death")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("segment_id", activeSegmentId)
                 .Set("cause", cause)
-                .Set("obstacle_id", metrics.ActiveObstacleId)
+                .Set("obstacle_id", obstacleId)
                 .Set("world_x", pos.x)
                 .Set("world_y", pos.y)
                 .Set("last_safe_object_id", metrics.LastSupportedPlatform)
@@ -864,7 +913,7 @@ namespace Contrast.Telemetry
 
         private void EmitRespawnTrack(float respawnDelay)
         {
-            Send(NewEvent("respawn_track", includeDeviceMetadata: false)
+            Send(NewEvent("respawn_track")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("checkpoint_id", metrics.DeathCheckpointId)
@@ -875,7 +924,7 @@ namespace Contrast.Telemetry
 
         private void EmitLevelFinish()
         {
-            Send(NewEvent("level_finish", includeDeviceMetadata: false)
+            Send(NewEvent("level_finish")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("action_name", "goal_reached")
@@ -889,7 +938,7 @@ namespace Contrast.Telemetry
 
         private void EmitPauseTrack(bool paused, float pauseDuration)
         {
-            TelemetryEvent evt = NewEvent("pause_track", includeDeviceMetadata: false)
+            TelemetryEvent evt = NewEvent("pause_track")
                 .Set("level_id", hasActiveLevel ? activeLevelId : null)
                 .Set("attempt_id", hasActiveLevel ? (int?)currentAttempt : null)
                 .Set("action_name", paused ? "pause" : "resume");
@@ -902,7 +951,7 @@ namespace Contrast.Telemetry
 
         private void EmitCollectibleEvent(string actionName, string specCollectibleId, string rawId, Vector2 pos)
         {
-            Send(NewEvent(actionName, includeDeviceMetadata: false)
+            Send(NewEvent(actionName)
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("segment_id", activeSegmentId)
@@ -924,7 +973,7 @@ namespace Contrast.Telemetry
             float tol,
             Vector2 pos)
         {
-            Send(NewEvent("newton_shot", includeDeviceMetadata: false)
+            Send(NewEvent("newton_shot")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("segment_id", activeSegmentId)
@@ -940,7 +989,7 @@ namespace Contrast.Telemetry
 
         private void EmitNewtonLock(EasyNewtonFinaleController newton, string stepChallengeId, int accuracy)
         {
-            TelemetryEvent evt = NewEvent("newton_lock", includeDeviceMetadata: false)
+            TelemetryEvent evt = NewEvent("newton_lock")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("segment_id", activeSegmentId)
@@ -965,7 +1014,7 @@ namespace Contrast.Telemetry
 
             lastStuckRealtime = now;
             Vector2 pos = pc.transform.position;
-            Send(NewEvent("player_stuck", includeDeviceMetadata: false)
+            Send(NewEvent("player_stuck")
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("segment_id", activeSegmentId)
@@ -993,6 +1042,7 @@ namespace Contrast.Telemetry
                 return;
 
             EmitChallengeTrack(finalActionName, NowUnixMs());
+            metrics.ClearActiveChallenge();
         }
 
         private void FlushActiveMovement(PlayerController pc)
@@ -1011,32 +1061,19 @@ namespace Contrast.Telemetry
         // Payload Construction & Network Transport
         // ──────────────────────────────────────────────────────────────
 
-        private TelemetryEvent NewEvent(string action, bool includeDeviceMetadata)
+        private TelemetryEvent NewEvent(string eventName)
         {
             TelemetryConfig.ApplySettings(Settings);
             TelemetrySettings s = Settings;
             long nowMs = NowUnixMs();
-            string effectiveUser = !string.IsNullOrEmpty(s.overrideUserId)
-                ? s.overrideUserId
-                : (!string.IsNullOrEmpty(userId) ? userId : s.defaultUserFallback);
+            string effectiveCollection = !string.IsNullOrEmpty(s.collection) ? s.collection : "player_logs";
 
-            TelemetryEvent evt = reusableEvent.Clear(action)
+            TelemetryEvent evt = reusableEvent.Clear(eventName)
                 .Set("game_id", s.gameId)
-                .Set("collection", action)
-                .Set("user", effectiveUser)
+                .Set("collection", effectiveCollection)
+                .Set("event_name", eventName)
                 .Set("session_id", sessionId ?? string.Empty)
-                .Set("user_id", effectiveUser)
                 .Set("timestamp", nowMs);
-
-            if (includeDeviceMetadata || !s.sendDeviceMetadataOnlyOnSessionStart)
-            {
-                evt.Set("game_version", !string.IsNullOrEmpty(Application.version) ? Application.version : "1.0.0")
-                   .Set("build_id", s.buildId ?? "build_01")
-                   .Set("platform", Application.platform.ToString())
-                   .Set("device_model", SystemInfo.deviceModel ?? string.Empty)
-                   .Set("os_version", SystemInfo.operatingSystem ?? string.Empty)
-                   .Set("country", s.country ?? "VN");
-            }
 
             if (s.extraGlobalFields != null)
             {
@@ -1049,6 +1086,48 @@ namespace Contrast.Telemetry
             }
 
             return evt;
+        }
+
+        private string ResolveEffectiveUserId(TelemetrySettings s)
+        {
+            if (!string.IsNullOrEmpty(s.overrideUserId))
+                return s.overrideUserId;
+            if (!string.IsNullOrEmpty(userId))
+                return userId;
+            return !string.IsNullOrEmpty(s.defaultUserFallback) ? s.defaultUserFallback : "player1";
+        }
+
+        private string ResolveEffectiveUserName(TelemetrySettings s)
+        {
+            if (!string.IsNullOrEmpty(s.overrideUserName))
+                return s.overrideUserName;
+            if (!string.IsNullOrEmpty(userName))
+                return userName;
+            return !string.IsNullOrEmpty(s.defaultUserName) ? s.defaultUserName : "Admin";
+        }
+
+        private static string ResolvePlatformName()
+        {
+            switch (Application.platform)
+            {
+                case RuntimePlatform.Android:
+                    return "Android";
+                case RuntimePlatform.IPhonePlayer:
+                    return "iOS";
+                case RuntimePlatform.WindowsPlayer:
+                case RuntimePlatform.WindowsEditor:
+                    return "Windows";
+                case RuntimePlatform.OSXPlayer:
+                case RuntimePlatform.OSXEditor:
+                    return "macOS";
+                case RuntimePlatform.LinuxPlayer:
+                case RuntimePlatform.LinuxEditor:
+                    return "Linux";
+                case RuntimePlatform.WebGLPlayer:
+                    return "WebGL";
+                default:
+                    return Application.platform.ToString();
+            }
         }
 
         private void Send(TelemetryEvent evt)
@@ -1164,6 +1243,16 @@ namespace Contrast.Telemetry
                     PlayerPrefs.Save();
                 }
                 userId = saved;
+            }
+
+            if (string.IsNullOrEmpty(userName))
+            {
+                string namePrefKey = !string.IsNullOrEmpty(s.playerPrefsUserNameKey)
+                    ? s.playerPrefsUserNameKey
+                    : "Contrast_Telemetry_UserName";
+                string savedName = PlayerPrefs.GetString(namePrefKey, string.Empty);
+                if (!string.IsNullOrEmpty(savedName))
+                    userName = savedName.Trim();
             }
 
             if (string.IsNullOrEmpty(sessionId))

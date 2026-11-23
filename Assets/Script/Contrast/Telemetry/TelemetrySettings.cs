@@ -7,7 +7,7 @@ namespace Contrast.Telemetry
     /// <summary>
     /// Inspector-editable ScriptableObject containing all configurable telemetry settings,
     /// endpoint parameters, thresholds, event toggles, field filters, and custom global fields.
-    /// Asset path: Assets/Assets/Resources/TelemetrySettings.asset
+    /// Asset path: Assets/Resources/TelemetrySettings.asset
     /// </summary>
     [CreateAssetMenu(fileName = "TelemetrySettings", menuName = "Contrast/Telemetry Settings")]
     public sealed class TelemetrySettings : ScriptableObject
@@ -33,6 +33,10 @@ namespace Contrast.Telemetry
         public string userIdPrefix = "player_";
         public string defaultUserFallback = "player1";
         public string playerPrefsUserKey = "Contrast_Telemetry_UserId";
+        [Tooltip("Nếu điền giá trị này, hệ thống sẽ gửi tên người chơi này trong session_track thay cho tên lưu trong PlayerPrefs.")]
+        public string overrideUserName = "";
+        public string defaultUserName = "Admin";
+        public string playerPrefsUserNameKey = "Contrast_Telemetry_UserName";
 
         [Header("General & Network")]
         public bool enabled = true;
@@ -44,7 +48,7 @@ namespace Contrast.Telemetry
 
         [Header("Payload Optimization")]
         public bool omitZeroOptionalFields = true;
-        [Tooltip("Nếu bật, metadata thiết bị (game_version, build_id, platform, device_model, os_version, country) chỉ gửi ở session_track start; các event sau vẫn giữ session_id, user_id, timestamp.")]
+        [Tooltip("Nếu bật, metadata thiết bị (game_version, build_id, platform, device_model, os_version, country) chỉ gửi ở session_track start; các session_track sau vẫn giữ user_id, user_name, session_id, timestamp.")]
         public bool sendDeviceMetadataOnlyOnSessionStart = false;
         [Tooltip("Nếu bật, movement/jump/obstacle gộp vào level_track, level_finish và challenge_track để giảm HTTP request; tắt đi nếu muốn gửi movement_track, jump_track, obstacle_track riêng lẻ.")]
         public bool aggregateHighFrequencyTracks = false;
@@ -76,7 +80,7 @@ namespace Contrast.Telemetry
         public bool trackObstacle = true;
 
         [Header("Filtering & Custom Global Fields")]
-        [Tooltip("Danh sách tên action bổ sung muốn tắt (VD: player_stuck).")]
+        [Tooltip("Danh sách event_name bổ sung muốn tắt (VD: player_stuck).")]
         public string[] disabledActions = new string[0];
         [Tooltip("Danh sách tên trường JSON muốn ẩn khỏi mọi payload (VD: platform, app_version).")]
         public string[] disabledFields = new string[0];
@@ -200,7 +204,7 @@ namespace Contrast.Telemetry
         }
 
 #if UNITY_EDITOR
-        private const string EditorAssetPath = "Assets/Assets/Resources/TelemetrySettings.asset";
+        private const string EditorAssetPath = "Assets/Resources/TelemetrySettings.asset";
 
         [UnityEditor.InitializeOnLoadMethod]
         private static void EnsureEditorAssetOnLoad()
@@ -250,8 +254,8 @@ namespace Contrast.Telemetry
                 }
             }
 
-            if (!System.IO.Directory.Exists("Assets/Assets/Resources"))
-                System.IO.Directory.CreateDirectory("Assets/Assets/Resources");
+            if (!System.IO.Directory.Exists("Assets/Resources"))
+                UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
 
             asset = CreateInstance<TelemetrySettings>();
             UnityEditor.AssetDatabase.CreateAsset(asset, EditorAssetPath);

@@ -246,6 +246,7 @@ namespace Contrast.Telemetry
         private bool hasColorSample;
         private bool hasPosSample;
         private bool wasStuckPrevFrame;
+        public bool WasStuckRecently => wasStuckPrevFrame;
         private int prevJumpRequests;
         private int prevJumpsExecuted;
         private int jumpSequence;
@@ -358,6 +359,11 @@ namespace Contrast.Telemetry
             ActiveChallengeElapsedSec = 0f;
             if (isFirstEnterInAttempt)
                 ActiveChallengeDeaths = 0;
+        }
+
+        public void ClearActiveChallenge()
+        {
+            ActiveChallengeId = null;
         }
 
         public void ResetSpawnTracking()

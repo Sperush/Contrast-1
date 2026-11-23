@@ -80,6 +80,7 @@ namespace Contrast.Telemetry
         private readonly StringBuilder sharedSb = new StringBuilder(384);
 
         public string Action { get; private set; }
+        public string EventName => Action;
 
         public TelemetryEvent() : this(string.Empty)
         {

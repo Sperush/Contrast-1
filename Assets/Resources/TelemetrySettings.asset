@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   endpointUrl: https://bigame.ezwork.vn/logs
   gameId: physic_game
-  collection: player_logs
+  collection: B1Quang
   buildId: build_01
   levelVersion: 1.0
   country: VN
@@ -22,6 +22,9 @@ MonoBehaviour:
   userIdPrefix: player_
   defaultUserFallback: player1
   playerPrefsUserKey: Contrast_Telemetry_UserId
+  overrideUserName: 
+  defaultUserName: Admin
+  playerPrefsUserNameKey: Contrast_Telemetry_UserName
   enabled: 1
   logToConsole: 0
   requestTimeoutSec: 8
