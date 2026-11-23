@@ -4,6 +4,7 @@ using System.IO;
 using Contrast.Color;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.SceneManagement;
 
 namespace Contrast.Audio
 {
@@ -21,6 +22,7 @@ namespace Contrast.Audio
         public const string GameplayMusicResource = "Sound/Aventure - Evening Tone (freetouse.com)";
         public const string MenuMusicFileName = "Calima - Full Moon (freetouse.com).mp3";
         public const string GameplayMusicFileName = "Aventure - Evening Tone (freetouse.com).mp3";
+        public const string DisabledSceneName = "B1Scene";
 
         private const string PrefKeyMusicVol = "Contrast_MusicVolume";
         private const string PrefKeySfxVol = "Contrast_SfxVolume";
@@ -95,6 +97,43 @@ namespace Contrast.Audio
             EnsureAudioSources();
             LoadSavedVolumes();
             GenerateClips();
+
+            if (Application.isPlaying)
+            {
+                SceneManager.sceneLoaded -= HandleSceneLoaded;
+                SceneManager.sceneLoaded += HandleSceneLoaded;
+                if (IsActiveSceneMuted())
+                {
+                    StopAllAudio();
+                }
+            }
+        }
+
+        private void OnDestroy()
+        {
+            SceneManager.sceneLoaded -= HandleSceneLoaded;
+            if (Instance == this)
+            {
+                Instance = null;
+            }
+        }
+
+        private static bool IsMutedScene(string sceneName)
+        {
+            return string.Equals(sceneName, DisabledSceneName, StringComparison.Ordinal);
+        }
+
+        private static bool IsActiveSceneMuted()
+        {
+            return Application.isPlaying && IsMutedScene(SceneManager.GetActiveScene().name);
+        }
+
+        private void HandleSceneLoaded(Scene scene, LoadSceneMode mode)
+        {
+            if (IsMutedScene(scene.name))
+            {
+                StopAllAudio();
+            }
         }
 
         private void EnsureAudioSources()
@@ -166,10 +205,49 @@ namespace Contrast.Audio
         }
 
         /// <summary>
+        /// Stops background music playback and cancels any pending async MP3 load.
+        /// </summary>
+        public void StopMusic()
+        {
+            if (bgmLoadCoroutine != null)
+            {
+                StopCoroutine(bgmLoadCoroutine);
+                bgmLoadCoroutine = null;
+            }
+
+            activeTrackKey = string.Empty;
+
+            if (bgmSource != null)
+            {
+                bgmSource.Stop();
+                bgmSource.clip = null;
+            }
+        }
+
+        /// <summary>
+        /// Stops both background music and any active SFX from ContrastAudioManager.
+        /// </summary>
+        public void StopAllAudio()
+        {
+            StopMusic();
+
+            if (sfxSource != null)
+            {
+                sfxSource.Stop();
+            }
+        }
+
+        /// <summary>
         /// Plays "Calima - Full Moon" for Main Menu / Waiting Screen.
         /// </summary>
         public void PlayMenuMusic()
         {
+            if (IsActiveSceneMuted())
+            {
+                StopAllAudio();
+                return;
+            }
+
             EnsureAudioSources();
             if (activeTrackKey == "menu" && bgmSource != null && bgmSource.isPlaying && bgmSource.clip != null)
                 return;
@@ -195,6 +273,12 @@ namespace Contrast.Audio
         /// </summary>
         public void PlayGameplayMusic()
         {
+            if (IsActiveSceneMuted())
+            {
+                StopAllAudio();
+                return;
+            }
+
             EnsureAudioSources();
             if (activeTrackKey == "gameplay" && bgmSource != null && bgmSource.isPlaying && bgmSource.clip != null)
                 return;
@@ -217,7 +301,7 @@ namespace Contrast.Audio
 
         private void StartLoopingClip(AudioClip clip)
         {
-            if (bgmSource == null || clip == null)
+            if (bgmSource == null || clip == null || IsActiveSceneMuted())
                 return;
 
             if (bgmSource.clip == clip && bgmSource.isPlaying)
@@ -237,7 +321,10 @@ namespace Contrast.Audio
         {
             string candidatePath = ResolveMp3DiskPath(fileName);
             if (string.IsNullOrEmpty(candidatePath) || !File.Exists(candidatePath))
+            {
+                bgmLoadCoroutine = null;
                 yield break;
+            }
 
             string uri = new Uri(candidatePath).AbsoluteUri;
             using (UnityWebRequest req = UnityWebRequestMultimedia.GetAudioClip(uri, AudioType.MPEG))
@@ -250,12 +337,16 @@ namespace Contrast.Audio
 #endif
                 {
                     Debug.LogWarning($"[AUDIO] Could not stream MP3 '{fileName}': {req.error}");
+                    bgmLoadCoroutine = null;
                     yield break;
                 }
 
                 AudioClip loaded = DownloadHandlerAudioClip.GetContent(req);
                 if (loaded == null)
+                {
+                    bgmLoadCoroutine = null;
                     yield break;
+                }
 
                 loaded.name = Path.GetFileNameWithoutExtension(fileName);
                 if (trackKey == "menu")
@@ -263,11 +354,13 @@ namespace Contrast.Audio
                 else
                     clipGameplayBgm = loaded;
 
-                if (activeTrackKey == trackKey)
+                if (activeTrackKey == trackKey && !IsActiveSceneMuted())
                 {
                     StartLoopingClip(loaded);
                 }
             }
+
+            bgmLoadCoroutine = null;
         }
 
         private static string ResolveMp3DiskPath(string fileName)
@@ -324,6 +417,9 @@ namespace Contrast.Audio
 
         private void PlayOneShot(AudioClip clip)
         {
+            if (IsActiveSceneMuted())
+                return;
+
             if (sfxSource != null && clip != null && sfxVolume > 0.0001f)
             {
                 sfxSource.PlayOneShot(clip, sfxVolume);

@@ -7,7 +7,7 @@ namespace Contrast.Telemetry
     /// <summary>
     /// Inspector-editable ScriptableObject containing all configurable telemetry settings,
     /// endpoint parameters, thresholds, event toggles, field filters, and custom global fields.
-    /// Asset path: Assets/Resources/TelemetrySettings.asset
+    /// Asset path: Assets/Assets/Resources/TelemetrySettings.asset
     /// </summary>
     [CreateAssetMenu(fileName = "TelemetrySettings", menuName = "Contrast/Telemetry Settings")]
     public sealed class TelemetrySettings : ScriptableObject
@@ -23,7 +23,7 @@ namespace Contrast.Telemetry
 
         [Header("API & Identity")]
         public string endpointUrl = "https://bigame.ezwork.vn/logs";
-        public string gameId = "physic_lab";
+        public string gameId = "physic_game";
         public string collection = "player_logs";
         public string buildId = "build_01";
         public string levelVersion = "1.0";
@@ -39,16 +39,16 @@ namespace Contrast.Telemetry
         public bool logToConsole = false;
         [Min(1)] public int requestTimeoutSec = 8;
         [Min(1)] public int quitFlushTimeoutSec = 4;
-        [Min(8)] public int maxPendingQueue = 256;
+        [Min(8)] public int maxPendingQueue = 512;
         [Min(8)] public int maxRecentPayloads = 100;
 
         [Header("Payload Optimization")]
         public bool omitZeroOptionalFields = true;
         [Tooltip("Nếu bật, metadata thiết bị (game_version, build_id, platform, device_model, os_version, country) chỉ gửi ở session_track start; các event sau vẫn giữ session_id, user_id, timestamp.")]
-        public bool sendDeviceMetadataOnlyOnSessionStart = true;
+        public bool sendDeviceMetadataOnlyOnSessionStart = false;
         [Tooltip("Nếu bật, movement/jump/obstacle gộp vào level_track, level_finish và challenge_track để giảm HTTP request; tắt đi nếu muốn gửi movement_track, jump_track, obstacle_track riêng lẻ.")]
-        public bool aggregateHighFrequencyTracks = true;
-        [Min(0f)] public float sendDelaySeconds = 0.15f;
+        public bool aggregateHighFrequencyTracks = false;
+        [Min(0f)] public float sendDelaySeconds = 0.05f;
 
         [Header("Sampling & Detection Thresholds")]
         [Min(0f)] public float stuckCooldownSec = 2.0f;
@@ -67,13 +67,13 @@ namespace Contrast.Telemetry
         public bool trackRespawn = true;
         public bool trackLevelFinish = true;
         public bool trackPause = true;
-        public bool trackCollectible = true;
-        public bool trackNewton = true;
-        public bool trackPlayerStuck = true;
+        public bool trackCollectible = false;
+        public bool trackNewton = false;
+        public bool trackPlayerStuck = false;
         [Header("High-Frequency Granular Tracks (Active when Aggregate = false)")]
-        public bool trackMovement = false;
-        public bool trackJump = false;
-        public bool trackObstacle = false;
+        public bool trackMovement = true;
+        public bool trackJump = true;
+        public bool trackObstacle = true;
 
         [Header("Filtering & Custom Global Fields")]
         [Tooltip("Danh sách tên action bổ sung muốn tắt (VD: player_stuck).")]
@@ -200,7 +200,7 @@ namespace Contrast.Telemetry
         }
 
 #if UNITY_EDITOR
-        private const string EditorAssetPath = "Assets/Resources/TelemetrySettings.asset";
+        private const string EditorAssetPath = "Assets/Assets/Resources/TelemetrySettings.asset";
 
         [UnityEditor.InitializeOnLoadMethod]
         private static void EnsureEditorAssetOnLoad()
@@ -234,8 +234,24 @@ namespace Contrast.Telemetry
             if (asset != null)
                 return asset;
 
-            if (!System.IO.Directory.Exists("Assets/Resources"))
-                UnityEditor.AssetDatabase.CreateFolder("Assets", "Resources");
+            asset = Resources.Load<TelemetrySettings>(ResourcesPath);
+            if (asset != null)
+                return asset;
+
+            string[] guids = UnityEditor.AssetDatabase.FindAssets("t:TelemetrySettings");
+            if (guids != null && guids.Length > 0)
+            {
+                for (int i = 0; i < guids.Length; i++)
+                {
+                    string existingPath = UnityEditor.AssetDatabase.GUIDToAssetPath(guids[i]);
+                    asset = UnityEditor.AssetDatabase.LoadAssetAtPath<TelemetrySettings>(existingPath);
+                    if (asset != null)
+                        return asset;
+                }
+            }
+
+            if (!System.IO.Directory.Exists("Assets/Assets/Resources"))
+                System.IO.Directory.CreateDirectory("Assets/Assets/Resources");
 
             asset = CreateInstance<TelemetrySettings>();
             UnityEditor.AssetDatabase.CreateAsset(asset, EditorAssetPath);

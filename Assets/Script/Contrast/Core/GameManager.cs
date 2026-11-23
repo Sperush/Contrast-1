@@ -117,7 +117,7 @@ namespace Contrast.Core
             pendingCampaignLevelIndex = -1;
         }
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+        // [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureGameplaySceneLoaded()
         {
             if (Contrast.Core.UnityCompat.FindAny<GameManager>(true) != null)

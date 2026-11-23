@@ -11,6 +11,8 @@ namespace Contrast.UI
     using UnityEngine.InputSystem;
 #endif
     using Color = UnityEngine.Color;
+    using UnityEngine.SceneManagement;
+
 
     /// <summary>
     /// Orchestrator for CONTRAST's Main Menu UI, organized into modular functional clusters:
@@ -96,6 +98,10 @@ namespace Contrast.UI
                 Show(true);
             else
                 Show(false);
+        }
+        public void BackToVatLy(){
+            ContrastAudioManager.Instance?.StopAllAudio();
+            SceneManager.LoadScene("B1Scene");
         }
 
         private void Start()

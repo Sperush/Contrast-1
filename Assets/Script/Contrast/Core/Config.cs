@@ -29,6 +29,6 @@ namespace Contrast.Core
         /// Master flag to enable or disable all test/debug shortcuts across the game.
         /// Set to <c>true</c> for testing/debugging; set to <c>false</c> to disable all test keys.
         /// </summary>
-        public bool enableTest = true;
+        public bool enableTest = false;
     }
 }

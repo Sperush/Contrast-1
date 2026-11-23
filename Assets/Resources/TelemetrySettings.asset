@@ -26,12 +26,12 @@ MonoBehaviour:
   logToConsole: 0
   requestTimeoutSec: 8
   quitFlushTimeoutSec: 4
-  maxPendingQueue: 256
+  maxPendingQueue: 512
   maxRecentPayloads: 100
   omitZeroOptionalFields: 1
-  sendDeviceMetadataOnlyOnSessionStart: 1
-  aggregateHighFrequencyTracks: 1
-  sendDelaySeconds: 0.15
+  sendDeviceMetadataOnlyOnSessionStart: 0
+  aggregateHighFrequencyTracks: 0
+  sendDelaySeconds: 0.05
   stuckCooldownSec: 2
   maxFrameDeltaTime: 0.25
   teleportDeltaXThreshold: 3
@@ -46,12 +46,12 @@ MonoBehaviour:
   trackRespawn: 1
   trackLevelFinish: 1
   trackPause: 1
-  trackCollectible: 1
-  trackNewton: 1
-  trackPlayerStuck: 1
-  trackMovement: 0
-  trackJump: 0
-  trackObstacle: 0
+  trackCollectible: 0
+  trackNewton: 0
+  trackPlayerStuck: 0
+  trackMovement: 1
+  trackJump: 1
+  trackObstacle: 1
   disabledActions: []
   disabledFields: []
   extraGlobalFields: []

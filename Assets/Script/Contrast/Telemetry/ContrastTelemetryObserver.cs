@@ -182,6 +182,7 @@ namespace Contrast.Telemetry
 
             if (hasActiveLevel && !levelClosed)
             {
+                FlushActiveMovement(GameManager.Instance != null ? GameManager.Instance.Player : null);
                 CloseActiveChallenge("fail");
                 EmitLevelTrack("end", "quit_level", "app_closed");
                 levelClosed = true;
@@ -247,7 +248,23 @@ namespace Contrast.Telemetry
                 ProcessMovementAndJumpTransitions(pc, tr);
 
                 if (tr.StuckStarted)
+                {
+                    if (!string.IsNullOrEmpty(metrics.ActiveObstacleId))
+                    {
+                        Vector2 pPos = pc.transform.position;
+                        int obsAttempt = metrics.ObstacleAttemptCounts.TryGetValue(metrics.ActiveObstacleId, out int c) ? c : 1;
+                        EmitObstacleTrack(
+                            metrics.ActiveObstacleId,
+                            metrics.ActiveObstacleType ?? "other",
+                            "obstacle_hit",
+                            obsAttempt,
+                            0f,
+                            "blocked",
+                            pPos.x,
+                            pPos.y);
+                    }
                     EmitPlayerStuck(pc);
+                }
 
                 if (pc.State == PlayerState.Dead && lastDeathFrame != Time.frameCount)
                 {
@@ -271,6 +288,7 @@ namespace Contrast.Telemetry
         {
             if (hasActiveLevel && !levelClosed)
             {
+                FlushActiveMovement(pc);
                 CloseActiveChallenge("fail");
                 EmitLevelTrack("end", "quit_level", "level_reloaded");
             }
@@ -339,6 +357,7 @@ namespace Contrast.Telemetry
         {
             if (from == GameState.Playing && to == GameState.Paused)
             {
+                FlushActiveMovement(GameManager.Instance != null ? GameManager.Instance.Player : null);
                 pauseStartRealtime = Time.realtimeSinceStartup;
                 EmitPauseTrack(true, 0f);
             }
@@ -356,6 +375,7 @@ namespace Contrast.Telemetry
             {
                 if (hasActiveLevel && !levelClosed)
                 {
+                    FlushActiveMovement(GameManager.Instance != null ? GameManager.Instance.Player : null);
                     CloseActiveChallenge("fail");
                     EmitLevelTrack("end", "quit_level", "quit_by_user");
                     levelClosed = true;
@@ -382,6 +402,7 @@ namespace Contrast.Telemetry
             {
                 if (hasActiveLevel && !levelClosed)
                 {
+                    FlushActiveMovement(GameManager.Instance != null ? GameManager.Instance.Player : null);
                     CloseActiveChallenge("fail");
                     EmitLevelTrack("retry", "quit_level", "retry");
                     levelClosed = true;
@@ -397,12 +418,12 @@ namespace Contrast.Telemetry
         private void ProcessMovementAndJumpTransitions(PlayerController pc, LevelSessionMetrics.FrameTransitions tr)
         {
             if (tr.MoveStopped)
-                EmitMovementTrack("move_stop", tr.MoveDirection, tr.MoveDuration, tr.MoveWorldX);
+                EmitMovementTrack("move_stop", tr.MoveStopDirection, tr.MoveDuration, tr.MoveWorldX);
             if (tr.MoveStarted)
-                EmitMovementTrack("move_start", tr.MoveDirection, 0f, tr.MoveWorldX);
+                EmitMovementTrack("move_start", tr.MoveStartDirection, 0f, tr.MoveWorldX);
 
             if (tr.JumpStarted)
-                EmitJumpTrack("jump_start", tr.JumpId, tr.JumpTakeoff, null, 0f, 0f, 1);
+                EmitJumpTrack("jump_start", tr.JumpId, tr.JumpTakeoff, null, 0f, 0f, null);
             if (tr.JumpLanded)
                 EmitJumpTrack("jump_land", tr.JumpId, tr.JumpTakeoff, tr.JumpLandingObjectId, tr.JumpAirTime, tr.JumpHorizontalDist, 1);
         }
@@ -413,7 +434,12 @@ namespace Contrast.Telemetry
                 return;
 
             if (pc != null)
-                metrics.SampleFrame(pc, 0f, Settings);
+            {
+                LevelSessionMetrics.FrameTransitions tr = metrics.SampleFrame(pc, 0f, Settings);
+                if (tr.MoveStopped)
+                    EmitMovementTrack("move_stop", tr.MoveStopDirection, tr.MoveDuration, tr.MoveWorldX);
+            }
+            FlushActiveMovement(pc);
 
             Vector2 pos = pc != null ? (Vector2)pc.transform.position : metrics.LastPos;
             string cause = pos.y <= activeKillY + 0.5f
@@ -488,6 +514,7 @@ namespace Contrast.Telemetry
             if (!hasActiveLevel || levelClosed)
                 return;
 
+            FlushActiveMovement(GameManager.Instance != null ? GameManager.Instance.Player : null);
             levelClosed = true;
             CloseActiveChallenge("clear");
 
@@ -577,6 +604,11 @@ namespace Contrast.Telemetry
                         if (metrics.PassActiveObstacle(out float timeToPass))
                             EmitObstacleTrack(obsId, obsType, "obstacle_pass", attemptIdx, timeToPass, null, pPos.x, pPos.y);
                     }
+                }
+                else
+                {
+                    metrics.ActiveObstacleId = null;
+                    metrics.ActiveObstacleType = null;
                 }
                 return;
             }
@@ -735,14 +767,18 @@ namespace Contrast.Telemetry
 
         private void EmitMovementTrack(string actionName, string direction, float moveDuration, float worldX)
         {
-            Send(NewEvent("movement_track", includeDeviceMetadata: false)
+            TelemetryEvent evt = NewEvent("movement_track", includeDeviceMetadata: false)
                 .Set("level_id", activeLevelId)
                 .Set("attempt_id", currentAttempt)
                 .Set("segment_id", activeSegmentId)
                 .Set("action_name", actionName)
-                .Set("direction", direction ?? "none")
-                .Set("move_duration", moveDuration)
-                .Set("world_x", worldX));
+                .Set("direction", direction ?? "none");
+
+            if (actionName == "move_stop")
+                evt.Set("move_duration", moveDuration);
+
+            evt.Set("world_x", worldX);
+            Send(evt);
         }
 
         private void EmitJumpTrack(
@@ -752,7 +788,7 @@ namespace Contrast.Telemetry
             string landingObjectId,
             float airTime,
             float horizontalDist,
-            int isSuccess)
+            int? isSuccess)
         {
             Send(NewEvent("jump_track", includeDeviceMetadata: false)
                 .Set("level_id", activeLevelId)
@@ -853,11 +889,15 @@ namespace Contrast.Telemetry
 
         private void EmitPauseTrack(bool paused, float pauseDuration)
         {
-            Send(NewEvent("pause_track", includeDeviceMetadata: false)
+            TelemetryEvent evt = NewEvent("pause_track", includeDeviceMetadata: false)
                 .Set("level_id", hasActiveLevel ? activeLevelId : null)
                 .Set("attempt_id", hasActiveLevel ? (int?)currentAttempt : null)
-                .Set("action_name", paused ? "pause" : "resume")
-                .Set("pause_duration", paused ? 0f : pauseDuration));
+                .Set("action_name", paused ? "pause" : "resume");
+
+            if (!paused)
+                evt.Set("pause_duration", pauseDuration);
+
+            Send(evt);
         }
 
         private void EmitCollectibleEvent(string actionName, string specCollectibleId, string rawId, Vector2 pos)
@@ -955,6 +995,18 @@ namespace Contrast.Telemetry
             EmitChallengeTrack(finalActionName, NowUnixMs());
         }
 
+        private void FlushActiveMovement(PlayerController pc)
+        {
+            if (!hasActiveLevel || levelClosed)
+                return;
+
+            if (metrics.TryStopMovement(out string dir, out float duration))
+            {
+                float worldX = pc != null ? pc.transform.position.x : metrics.LastPos.x;
+                EmitMovementTrack("move_stop", dir, duration, worldX);
+            }
+        }
+
         // ──────────────────────────────────────────────────────────────
         // Payload Construction & Network Transport
         // ──────────────────────────────────────────────────────────────
@@ -970,8 +1022,7 @@ namespace Contrast.Telemetry
 
             TelemetryEvent evt = reusableEvent.Clear(action)
                 .Set("game_id", s.gameId)
-                .Set("collection", s.collection)
-                .Set("action", action)
+                .Set("collection", action)
                 .Set("user", effectiveUser)
                 .Set("session_id", sessionId ?? string.Empty)
                 .Set("user_id", effectiveUser)

@@ -345,7 +345,7 @@ namespace Contrast.Build
             }
         }
 
-        [InitializeOnLoadMethod]
+        // [InitializeOnLoadMethod]
         private static void EnsureMainGameSceneOpenedInEditor()
         {
             if (Application.isBatchMode)

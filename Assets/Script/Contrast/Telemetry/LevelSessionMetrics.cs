@@ -371,6 +371,23 @@ namespace Contrast.Telemetry
             hasPosSample = false;
         }
 
+        public bool TryStopMovement(out string direction, out float duration)
+        {
+            if (!IsMoving)
+            {
+                direction = "none";
+                duration = 0f;
+                return false;
+            }
+
+            direction = CurrentMoveDirection;
+            duration = CurrentMoveDurationSec;
+            IsMoving = false;
+            CurrentMoveDirection = "none";
+            CurrentMoveDurationSec = 0f;
+            return true;
+        }
+
         public struct FrameTransitions
         {
             public bool JumpStarted;
@@ -383,7 +400,8 @@ namespace Contrast.Telemetry
 
             public bool MoveStarted;
             public bool MoveStopped;
-            public string MoveDirection;
+            public string MoveStopDirection;
+            public string MoveStartDirection;
             public float MoveDuration;
             public float MoveWorldX;
 
@@ -460,7 +478,7 @@ namespace Contrast.Telemetry
                 if (dir != CurrentMoveDirection)
                 {
                     tr.MoveStopped = true;
-                    tr.MoveDirection = CurrentMoveDirection;
+                    tr.MoveStopDirection = CurrentMoveDirection;
                     tr.MoveDuration = CurrentMoveDurationSec;
                     tr.MoveWorldX = pos.x;
                     IsMoving = false;
@@ -473,7 +491,7 @@ namespace Contrast.Telemetry
                 CurrentMoveDirection = dir;
                 CurrentMoveDurationSec = 0f;
                 tr.MoveStarted = true;
-                tr.MoveDirection = dir;
+                tr.MoveStartDirection = dir;
                 tr.MoveWorldX = pos.x;
             }
             else if (!IsMoving)
